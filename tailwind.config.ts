@@ -15,6 +15,14 @@ const config: Config = {
       },
     },
   },
+  colors: {
+    primary: "#1E3A8A", // Dark Blue
+    secondary: "#10B981", // Green
+    accent: "#F59E0B", // Orange
+  },
+  fontFamily: {
+    sans: ["Roboto", "sans-serif"],
+  },
   plugins: [],
 };
 export default config;
