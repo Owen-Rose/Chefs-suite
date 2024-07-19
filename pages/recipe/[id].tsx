@@ -1,5 +1,6 @@
-import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
+// pages/recipe/[id].tsx
+
+import { useRouter } from 'next/router';
 import {
   Card,
   CardContent,
@@ -9,27 +10,14 @@ import {
   ListItem,
   ListItemText,
   Divider,
-  Grid,
   Paper,
-} from "@mui/material";
-import { Recipe } from "../../types/Recipe";
-import dummyRecipes from "../../data/dummydata";
+} from '@mui/material';
+import { GetServerSideProps } from 'next';
+import clientPromise from '../../lib/mongodb';
+import { ObjectId } from 'mongodb';
 
-const RecipeDetailsPage = () => {
+const RecipeDetailsPage = ({ recipe }) => {
   const router = useRouter();
-  const { id } = router.query;
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-
-  useEffect(() => {
-    if (id) {
-      const foundRecipe = dummyRecipes.find((r) => r.id === Number(id));
-      if (foundRecipe) {
-        setRecipe(foundRecipe);
-      } else {
-        setRecipe(null);
-      }
-    }
-  }, [id]);
 
   if (!recipe) return <div>Loading...</div>;
 
@@ -120,7 +108,7 @@ const RecipeDetailsPage = () => {
           <Button
             variant="contained"
             color="primary"
-            onClick={() => router.push(`/edit/${recipe.id}`)}
+            onClick={() => router.push(`/edit/${recipe._id}`)}
             className="mr-2"
           >
             Edit
@@ -141,3 +129,23 @@ const RecipeDetailsPage = () => {
 };
 
 export default RecipeDetailsPage;
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { id } = context.params;
+  const client = await clientPromise;
+  const db = client.db();
+
+  const recipe = await db.collection('recipes').findOne({ _id: new ObjectId(id as string) });
+
+  if (!recipe) {
+    return {
+      notFound: true,
+    };
+  }
+
+  return {
+    props: {
+      recipe: JSON.parse(JSON.stringify(recipe)),
+    },
+  };
+};
