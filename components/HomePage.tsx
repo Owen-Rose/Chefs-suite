@@ -15,8 +15,14 @@ import {
 import { Search, Add, Kitchen } from "@mui/icons-material";
 import Link from "next/link";
 
+interface Recipe {
+  _id: string;
+  name: string;
+  description?: string;
+}
+
 const HomePage = () => {
-  const [recipes, setRecipes] = useState([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -67,21 +73,19 @@ const HomePage = () => {
         <List>
           {filteredRecipes.map((recipe) => (
             <div key={recipe._id} className="mb-4">
-              <ListItem
-                component={Link}
-                href={`/recipe/${recipe._id}`}
-                className="hover:bg-gray-100 transition-colors duration-300 rounded-lg p-4 shadow-md"
-              >
-                <ListItemAvatar>
-                  <Avatar>
-                    <Kitchen />
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={recipe.name}
-                  secondary={recipe.description || "No description available"}
-                />
-              </ListItem>
+              <Link href={`/recipe/${recipe._id}`} passHref>
+                <ListItem className="hover:bg-gray-100 transition-colors duration-300 rounded-lg p-4 shadow-md cursor-pointer">
+                  <ListItemAvatar>
+                    <Avatar>
+                      <Kitchen />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={recipe.name}
+                    secondary={recipe.description || "No description available"}
+                  />
+                </ListItem>
+              </Link>
               <Divider />
             </div>
           ))}

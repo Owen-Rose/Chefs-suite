@@ -9,19 +9,35 @@ import {
 } from "@mui/material";
 import { AddCircleOutline, RemoveCircleOutline } from "@mui/icons-material";
 import { Recipe } from "../types/Recipe";
+import { Ingredient } from "../types/Ingredient";
 
 const AddRecipePage = () => {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [ingredients, setIngredients] = useState<string[]>([""]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([
+    { id: 0, productName: "", quantity: 0, unit: "" },
+  ]);
   const [procedure, setProcedure] = useState<string[]>([""]);
 
   const handleAddIngredient = () => {
-    setIngredients([...ingredients, ""]);
+    setIngredients([
+      ...ingredients,
+      { id: 0, productName: "", quantity: 0, unit: "" },
+    ]);
   };
 
   const handleRemoveIngredient = (index: number) => {
     const newIngredients = ingredients.filter((_, i) => i !== index);
+    setIngredients(newIngredients);
+  };
+
+  const handleIngredientChange = (
+    index: number,
+    field: "productName" | "quantity" | "unit",
+    value: string | number
+  ) => {
+    const newIngredients = [...ingredients];
+    (newIngredients[index] as any)[field] = value;
     setIngredients(newIngredients);
   };
 
@@ -38,7 +54,15 @@ const AddRecipePage = () => {
     const newRecipe: Recipe = {
       id: Date.now(), // Replace with actual ID generation logic
       name,
+      createdDate: new Date().toISOString(),
+      version: "1.0",
+      station: "Main",
+      batchNumber: 1,
+      equipment: [],
       ingredients,
+      yield: "N/A",
+      portionSize: "N/A",
+      portionsPerRecipe: "N/A",
       procedure,
     };
 
@@ -70,12 +94,31 @@ const AddRecipePage = () => {
               label={`Ingredient ${index + 1}`}
               variant="outlined"
               fullWidth
-              value={ingredient}
-              onChange={(e) => {
-                const newIngredients = [...ingredients];
-                newIngredients[index] = e.target.value;
-                setIngredients(newIngredients);
-              }}
+              value={ingredient.productName}
+              onChange={(e) =>
+                handleIngredientChange(index, "productName", e.target.value)
+              }
+              className="mr-2"
+            />
+            <TextField
+              label="Quantity"
+              variant="outlined"
+              fullWidth
+              type="number"
+              value={ingredient.quantity}
+              onChange={(e) =>
+                handleIngredientChange(index, "quantity", +e.target.value)
+              }
+              className="mr-2"
+            />
+            <TextField
+              label="Unit"
+              variant="outlined"
+              fullWidth
+              value={ingredient.unit}
+              onChange={(e) =>
+                handleIngredientChange(index, "unit", e.target.value)
+              }
               className="mr-2"
             />
             <IconButton

@@ -1,13 +1,19 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, MongoClientOptions } from "mongodb";
 
-const uri = process.env.MONGODB_URI;
-const options = {};
+const uri: string = process.env.MONGODB_URI!;
+const options: MongoClientOptions = {};
 
-let client;
-let clientPromise;
+let client: MongoClient;
+let clientPromise: Promise<MongoClient>;
 
 if (!process.env.MONGODB_URI) {
   throw new Error("Please add your Mongo URI to .env.local");
+}
+
+// Ensure the global variable is declared for development mode
+declare global {
+  // eslint-disable-next-line no-var
+  var _mongoClientPromise: Promise<MongoClient>;
 }
 
 if (process.env.NODE_ENV === "development") {

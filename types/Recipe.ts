@@ -1,10 +1,4 @@
-export interface Ingredient {
-  id: number;
-  vendor?: string;
-  productName: string;
-  quantity: number;
-  unit: string;
-}
+import { Ingredient } from "./Ingredient";
 
 export interface Recipe {
   id: number;

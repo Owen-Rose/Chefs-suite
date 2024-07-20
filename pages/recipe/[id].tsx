@@ -1,22 +1,41 @@
-// pages/recipe/[id].tsx
-
+import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import {
-  Card,
-  CardContent,
+  Paper,
   Typography,
-  Button,
   List,
   ListItem,
   ListItemText,
   Divider,
-  Paper,
+  Button,
 } from "@mui/material";
-import { GetServerSideProps } from "next";
 import clientPromise from "../../lib/mongodb";
 import { ObjectId } from "mongodb";
+import { ParsedUrlQuery } from "querystring";
 
-const RecipeDetailsPage = ({ recipe }) => {
+interface Ingredient {
+  id: number;
+  productName: string;
+  quantity: number;
+  unit: string;
+}
+
+interface Recipe {
+  _id: string;
+  name: string;
+  createdDate: string;
+  version: string;
+  station: string;
+  batchNumber: number;
+  equipment: string[];
+  ingredients: Ingredient[];
+  yield: string;
+  portionSize: string;
+  portionsPerRecipe: string;
+  procedure: string[];
+}
+
+const RecipeDetailsPage = ({ recipe }: { recipe: Recipe }) => {
   const router = useRouter();
 
   if (!recipe) return <div>Loading...</div>;
@@ -128,12 +147,14 @@ const RecipeDetailsPage = ({ recipe }) => {
   );
 };
 
-export default RecipeDetailsPage;
+interface Params extends ParsedUrlQuery {
+  id: string;
+}
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { id } = context.params;
+  const { id } = context.params as Params;
   const client = await clientPromise;
-  const db = client.db();
+  const db = client.db("recipesDB");
 
   let recipe;
   try {
@@ -157,3 +178,5 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     },
   };
 };
+
+export default RecipeDetailsPage;

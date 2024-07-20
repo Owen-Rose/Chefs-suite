@@ -40,7 +40,7 @@ const EditRecipePage = () => {
         setCreatedDate(foundRecipe.createdDate);
         setVersion(foundRecipe.version);
         setStation(foundRecipe.station);
-        setBatchNumber(foundRecipe.batchNumber);
+        setBatchNumber(Number(foundRecipe.batchNumber)); // Ensure batchNumber is a number
         setEquipment(foundRecipe.equipment);
         setIngredients(foundRecipe.ingredients);
         setProcedure(foundRecipe.procedure);
@@ -300,9 +300,6 @@ const EditRecipePage = () => {
         <TextField
           label="Portions Per Recipe"
           variant="outlined"
-          npm
-          run
-          Divider
           fullWidth
           value={portionsPerRecipe}
           onChange={(e) => setPortionsPerRecipe(e.target.value)}
