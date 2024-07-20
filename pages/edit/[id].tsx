@@ -300,6 +300,9 @@ const EditRecipePage = () => {
         <TextField
           label="Portions Per Recipe"
           variant="outlined"
+          npm
+          run
+          Divider
           fullWidth
           value={portionsPerRecipe}
           onChange={(e) => setPortionsPerRecipe(e.target.value)}

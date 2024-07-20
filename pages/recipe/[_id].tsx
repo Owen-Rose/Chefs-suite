@@ -1,6 +1,6 @@
 // pages/recipe/[id].tsx
 
-import { useRouter } from 'next/router';
+import { useRouter } from "next/router";
 import {
   Card,
   CardContent,
@@ -11,10 +11,10 @@ import {
   ListItemText,
   Divider,
   Paper,
-} from '@mui/material';
-import { GetServerSideProps } from 'next';
-import clientPromise from '../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+} from "@mui/material";
+import { GetServerSideProps } from "next";
+import clientPromise from "../../lib/mongodb";
+import { ObjectId } from "mongodb";
 
 const RecipeDetailsPage = ({ recipe }) => {
   const router = useRouter();
@@ -59,8 +59,8 @@ const RecipeDetailsPage = ({ recipe }) => {
           Ingredients
         </Typography>
         <List>
-          {recipe.ingredients.map((ingredient) => (
-            <ListItem key={ingredient.id} className="pl-0">
+          {recipe.ingredients.map((ingredient, index) => (
+            <ListItem key={index} className="pl-0">
               <ListItemText
                 primary={`${ingredient.productName}: ${ingredient.quantity}${ingredient.unit}`}
               />
@@ -135,7 +135,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const client = await clientPromise;
   const db = client.db();
 
-  const recipe = await db.collection('recipes').findOne({ _id: new ObjectId(id as string) });
+  let recipe;
+  try {
+    recipe = await db
+      .collection("recipes")
+      .findOne({ _id: new ObjectId(id as string) });
+  } catch (error) {
+    console.error("Error fetching recipe:", error);
+    recipe = null;
+  }
 
   if (!recipe) {
     return {
