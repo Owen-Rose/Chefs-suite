@@ -11,30 +11,39 @@ import {
   Paper,
   Typography,
   Divider,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
 } from "@mui/material";
 import { Search, Add, Kitchen } from "@mui/icons-material";
 import Link from "next/link";
-
-interface Recipe {
-  _id: string;
-  name: string;
-  description?: string;
-}
+import { Recipe } from "@/types/Recipe";
 
 const HomePage = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [search, setSearch] = useState("");
+  const [station, setStation] = useState("");
+  const [stations, setStations] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/recipes")
       .then((res) => res.json())
-      .then((data) => setRecipes(data))
+      .then((data: Recipe[]) => {
+        setRecipes(data);
+        const uniqueStations = Array.from(
+          new Set(data.map((recipe) => recipe.station))
+        );
+        setStations(uniqueStations);
+      })
       .catch((error) => console.error("Error fetching recipes: ", error));
   }, []);
 
-  const filteredRecipes = recipes.filter((recipe) =>
-    recipe.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredRecipes = recipes
+    .filter((recipe) =>
+      recipe.name.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter((recipe) => (station ? recipe.station === station : true));
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
@@ -55,6 +64,23 @@ const HomePage = () => {
             }}
           />
         </div>
+        <FormControl variant="outlined" className="w-full md:w-1/3 ml-4">
+          <InputLabel>Station</InputLabel>
+          <Select
+            value={station}
+            onChange={(e) => setStation(e.target.value)}
+            label="Station"
+          >
+            <MenuItem value="">
+              <em>All</em>
+            </MenuItem>
+            {stations.map((station) => (
+              <MenuItem key={station} value={station}>
+                {station}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <Link href="/add">
           <Button
             variant="contained"
