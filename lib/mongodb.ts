@@ -27,4 +27,10 @@ if (process.env.NODE_ENV === "development") {
   clientPromise = client.connect();
 }
 
-export default clientPromise;
+async function connectToDatabase() {
+  const client = await clientPromise;
+  const db = client.db(); // replace with your database name if needed
+  return { db, client };
+}
+
+export { connectToDatabase };

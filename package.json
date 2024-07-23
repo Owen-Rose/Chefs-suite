@@ -15,6 +15,7 @@
     "@mui/icons-material": "^5.15.20",
     "@mui/material": "^5.15.20",
     "firebase": "^10.12.4",
+    "firebase-admin": "^12.2.0",
     "mongodb": "^6.8.0",
     "mongoose": "^8.5.1",
     "next": "14.2.4",

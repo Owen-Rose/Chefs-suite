@@ -2,12 +2,12 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDYwrVUqa3MsF20uJ3ytBYnqP37mObP23w",
-  authDomain: "recipe-web-app-fdddb.firebaseapp.com",
-  projectId: "recipe-web-app-fdddb",
-  storageBucket: "recipe-web-app-fdddb.appspot.com",
-  messagingSenderId: "8910166849",
-  appId: "1:8910166849:web:2f5951a8d352d3a5e25fc0",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
