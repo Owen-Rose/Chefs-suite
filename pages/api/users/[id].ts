@@ -1,9 +1,15 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { auth } from "../../../lib/firebaseAdmin";
+import { Db, MongoClient } from "mongodb";
+
+type DbType = {
+  db: Db;
+  client: MongoClient;
+};
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  const { db } = await connectToDatabase();
+  const { db }: DbType = await connectToDatabase();
   const { id } = req.query;
 
   switch (req.method) {
@@ -21,7 +27,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 const handleGetUser = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  db,
+  db: Db,
   id: string
 ) => {
   try {
@@ -38,7 +44,7 @@ const handleGetUser = async (
 const handleUpdateUser = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  db,
+  db: Db,
   id: string
 ) => {
   const { email, password, ...rest } = req.body;
@@ -60,14 +66,18 @@ const handleUpdateUser = async (
 
     res.status(200).json(updatedUser);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(400).json({ error: "An unknown error occurred" });
+    }
   }
 };
 
 const handleDeleteUser = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  db,
+  db: Db,
   id: string
 ) => {
   try {

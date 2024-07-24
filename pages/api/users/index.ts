@@ -1,9 +1,15 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { auth } from "../../../lib/firebaseAdmin";
+import { Db, MongoClient } from "mongodb";
+
+type DbType = {
+  db: Db;
+  client: MongoClient;
+};
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  const { db } = await connectToDatabase();
+  const { db }: DbType = await connectToDatabase();
 
   switch (req.method) {
     case "POST":
@@ -18,7 +24,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 const handleCreateUser = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  db
+  db: Db
 ) => {
   const { email, password, ...rest } = req.body;
 
@@ -39,14 +45,18 @@ const handleCreateUser = async (
     await db.collection("users").insertOne(newUser);
     res.status(201).json(newUser);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(400).json({ error: "An unknown error occurred" });
+    }
   }
 };
 
 const handleGetUsers = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  db
+  db: Db
 ) => {
   try {
     const users = await db.collection("users").find().toArray();

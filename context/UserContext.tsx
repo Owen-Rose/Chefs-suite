@@ -1,29 +1,56 @@
-import { createContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useState,
+  useEffect,
+  ReactNode,
+  Dispatch,
+  SetStateAction,
+} from "react";
 
-const UserContext = createContext(null);
+// Define the User type based on the expected structure of user data
+type UserType = {
+  // Define the properties of the user object, e.g.:
+  id: string;
+  name: string;
+  email: string;
+  // Add more properties as needed
+};
 
-const UserProvider = ({ children }) => {
-    const [user, setUser] = useState([]);
+// Define the UserContext type
+type UserContextType = {
+  user: UserType[];
+  setUser: Dispatch<SetStateAction<UserType[]>>;
+};
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const response = await fetch("/api/user");
-                const data = await response.json();
-                setUser(data);
-            } catch (error) {
-                console.error("Error fetching user: ", error);
-            }
-        };
+// Initialize UserContext with the correct type
+const UserContext = createContext<UserContextType | null>(null);
 
-        fetchUser();
-    }, []);
-
-    return (
-        <UserContext.Provider value={{ user, setUser }}>
-            {children}
-        </UserContext.Provider>
-    );
+interface UserProviderProps {
+  children: ReactNode;
 }
+
+const UserProvider = ({ children }: UserProviderProps) => {
+  const [user, setUser] = useState<UserType[]>([]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("/api/user");
+        const data = await response.json();
+        setUser(data);
+      } catch (error) {
+        console.error("Error fetching user: ", error);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  return (
+    <UserContext.Provider value={{ user, setUser }}>
+      {children}
+    </UserContext.Provider>
+  );
+};
 
 export { UserContext, UserProvider };

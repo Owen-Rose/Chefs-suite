@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import {
   Container,
   Typography,
@@ -36,12 +36,16 @@ const Title = styled(Typography)(({ theme }) => ({
   textAlign: "center",
 }));
 
-const UserForm = ({ userId = null }) => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+interface UserFormProps {
+  userId?: string | null;
+}
+
+const UserForm = ({ userId = null }: UserFormProps) => {
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
   const router = useRouter();
 
   useEffect(() => {
@@ -65,7 +69,7 @@ const UserForm = ({ userId = null }) => {
     }
   }, [userId]);
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
     try {
@@ -138,18 +142,18 @@ const UserForm = ({ userId = null }) => {
       <Snackbar
         open={!!success}
         autoHideDuration={6000}
-        onClose={() => setSuccess(null)}
+        onClose={() => setSuccess("")}
       >
-        <Alert onClose={() => setSuccess(null)} severity="success">
+        <Alert onClose={() => setSuccess("")} severity="success">
           {success}
         </Alert>
       </Snackbar>
       <Snackbar
         open={!!error}
         autoHideDuration={6000}
-        onClose={() => setError(null)}
+        onClose={() => setError("")}
       >
-        <Alert onClose={() => setError(null)} severity="error">
+        <Alert onClose={() => setError("")} severity="error">
           {error}
         </Alert>
       </Snackbar>

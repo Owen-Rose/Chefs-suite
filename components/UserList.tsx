@@ -23,6 +23,7 @@ import {
 } from "@mui/material";
 import { Add, Edit, Delete } from "@mui/icons-material";
 import { styled } from "@mui/system";
+import { User } from "../types/User";
 
 const ContainerStyled = styled(Container)(({ theme }) => ({
   padding: "2rem",
@@ -63,18 +64,18 @@ const AddButton = styled(Button)(({ theme }) => ({
 }));
 
 const UserList = () => {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const response = await fetch("/api/users");
-        const data = await response.json();
+        const data: User[] = await response.json();
         setUsers(data);
       } catch (error) {
         setError("Error fetching users.");
@@ -85,7 +86,7 @@ const UserList = () => {
     fetchUsers();
   }, []);
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string) => {
     try {
       await fetch(`/api/users/${id}`, {
         method: "DELETE",
@@ -97,7 +98,7 @@ const UserList = () => {
     }
   };
 
-  const handleOpenDialog = (user) => {
+  const handleOpenDialog = (user: User) => {
     setSelectedUser(user);
     setOpen(true);
   };
@@ -191,8 +192,10 @@ const UserList = () => {
           </Button>
           <Button
             onClick={() => {
-              handleDelete(selectedUser.uid);
-              handleCloseDialog();
+              if (selectedUser) {
+                handleDelete(selectedUser.uid);
+                handleCloseDialog();
+              }
             }}
             color="secondary"
             autoFocus
