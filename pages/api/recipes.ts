@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { MongoClient } from "mongodb";
-import clientPromise from "../../lib/mongodb";
+import { connectToDatabase } from "../../lib/mongodb";
 
 export default async function handler(
   req: NextApiRequest,
@@ -8,10 +7,8 @@ export default async function handler(
 ) {
   try {
     console.log("Connecting to MongoDB...");
-    const client: MongoClient = await clientPromise;
+    const { db } = await connectToDatabase();
     console.log("Connected to MongoDB");
-
-    const db = client.db("recipesDB");
 
     const recipes = await db.collection("recipes").find({}).toArray();
     console.log("Fetched recipes:", recipes);

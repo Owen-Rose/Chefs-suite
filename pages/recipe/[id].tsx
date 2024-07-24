@@ -9,7 +9,7 @@ import {
   Divider,
   Button,
 } from "@mui/material";
-import clientPromise from "../../lib/mongodb";
+import { connectToDatabase } from "../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import { ParsedUrlQuery } from "querystring";
 
@@ -153,8 +153,7 @@ interface Params extends ParsedUrlQuery {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params as Params;
-  const client = await clientPromise;
-  const db = client.db("recipesDB");
+  const { db } = await connectToDatabase();
 
   let recipe;
   try {

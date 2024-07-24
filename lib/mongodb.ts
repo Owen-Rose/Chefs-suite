@@ -29,7 +29,7 @@ if (process.env.NODE_ENV === "development") {
 
 async function connectToDatabase() {
   const client = await clientPromise;
-  const db = client.db(); // replace with your database name if needed
+  const db = client.db("recipesDB"); // replace with your database name if needed
   return { db, client };
 }
 
