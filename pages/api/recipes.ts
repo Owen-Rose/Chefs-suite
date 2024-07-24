@@ -10,8 +10,6 @@ export default async function handler(
     const { db } = await connectToDatabase();
     console.log("Connected to MongoDB");
 
-    const db = client.db("recipesDB");
-
     const recipes = await db.collection("recipes").find({}).toArray();
     console.log("Fetched recipes:", recipes);
 
