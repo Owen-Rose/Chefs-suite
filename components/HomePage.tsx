@@ -27,7 +27,7 @@ const HomePage = () => {
   const [stations, setStations] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch("/api/recipes")
+    fetch("/api/recipes/")
       .then((res) => res.json())
       .then((data: Recipe[]) => {
         setRecipes(data);

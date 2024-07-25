@@ -7,13 +7,10 @@ import {
   Typography,
   IconButton,
   Divider,
-  List,
-  ListItem,
-  ListItemText,
+  Grid,
 } from "@mui/material";
 import { AddCircleOutline, RemoveCircleOutline } from "@mui/icons-material";
 import { Recipe } from "../../types/Recipe";
-import dummyRecipes from "../../data/dummydata";
 
 const EditRecipePage = () => {
   const router = useRouter();
@@ -34,20 +31,22 @@ const EditRecipePage = () => {
 
   useEffect(() => {
     if (id) {
-      const foundRecipe = dummyRecipes.find((r) => r.id === Number(id));
-      if (foundRecipe) {
-        setName(foundRecipe.name);
-        setCreatedDate(foundRecipe.createdDate);
-        setVersion(foundRecipe.version);
-        setStation(foundRecipe.station);
-        setBatchNumber(Number(foundRecipe.batchNumber)); // Ensure batchNumber is a number
-        setEquipment(foundRecipe.equipment);
-        setIngredients(foundRecipe.ingredients);
-        setProcedure(foundRecipe.procedure);
-        setYieldAmount(foundRecipe.yield);
-        setPortionSize(foundRecipe.portionSize);
-        setPortionsPerRecipe(foundRecipe.portionsPerRecipe);
-      }
+      fetch(`/api/recipes/${id}`)
+        .then((res) => res.json())
+        .then((data: Recipe) => {
+          setName(data.name);
+          setCreatedDate(data.createdDate);
+          setVersion(data.version);
+          setStation(data.station);
+          setBatchNumber(data.batchNumber);
+          setEquipment(data.equipment);
+          setIngredients(data.ingredients);
+          setProcedure(data.procedure);
+          setYieldAmount(data.yield);
+          setPortionSize(data.portionSize);
+          setPortionsPerRecipe(data.portionsPerRecipe);
+        })
+        .catch((error) => console.error("Error fetching recipe:", error));
     }
   }, [id]);
 
@@ -81,9 +80,9 @@ const EditRecipePage = () => {
     setProcedure(newProcedure);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const updatedRecipe: Recipe = {
-      id: Number(id),
+      _id: id as string,
       name,
       createdDate,
       version,
@@ -97,58 +96,84 @@ const EditRecipePage = () => {
       portionsPerRecipe,
     };
 
-    // Save the updated recipe (e.g., to a state management store or API)
-    // Redirect to home page after saving
-    router.push("/");
+    try {
+      const response = await fetch(`/api/recipes/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedRecipe),
+      });
+
+      if (response.ok) {
+        router.push("/");
+      } else {
+        const error = await response.json();
+        console.error("Failed to update recipe:", error.message);
+      }
+    } catch (error) {
+      console.error("Error updating recipe:", error);
+    }
   };
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
+    <div className="p-8 bg-gray-100 min-h-screen">
       <Paper elevation={3} className="p-6 mb-6">
         <Typography variant="h4" component="div" className="font-bold mb-4">
           Edit Recipe
         </Typography>
-        <TextField
-          label="Name"
-          variant="outlined"
-          fullWidth
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="mb-4"
-        />
-        <TextField
-          label="Created Date"
-          variant="outlined"
-          fullWidth
-          value={createdDate}
-          onChange={(e) => setCreatedDate(e.target.value)}
-          className="mb-4"
-        />
-        <TextField
-          label="Version"
-          variant="outlined"
-          fullWidth
-          value={version}
-          onChange={(e) => setVersion(e.target.value)}
-          className="mb-4"
-        />
-        <TextField
-          label="Station"
-          variant="outlined"
-          fullWidth
-          value={station}
-          onChange={(e) => setStation(e.target.value)}
-          className="mb-4"
-        />
-        <TextField
-          label="Batch Number"
-          variant="outlined"
-          fullWidth
-          type="number"
-          value={batchNumber}
-          onChange={(e) => setBatchNumber(Number(e.target.value))}
-          className="mb-4"
-        />
+        <Divider className="mb-4" />
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <TextField
+              label="Name"
+              variant="outlined"
+              fullWidth
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mb-4"
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Created Date"
+              variant="outlined"
+              fullWidth
+              value={createdDate}
+              onChange={(e) => setCreatedDate(e.target.value)}
+              className="mb-4"
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Version"
+              variant="outlined"
+              fullWidth
+              value={version}
+              onChange={(e) => setVersion(e.target.value)}
+              className="mb-4"
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Station"
+              variant="outlined"
+              fullWidth
+              value={station}
+              onChange={(e) => setStation(e.target.value)}
+              className="mb-4"
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Batch Number"
+              variant="outlined"
+              fullWidth
+              type="number"
+              value={batchNumber}
+              onChange={(e) => setBatchNumber(Number(e.target.value))}
+              className="mb-4"
+            />
+          </Grid>
+        </Grid>
 
         <Typography variant="h6" component="div" className="font-bold mb-4">
           Equipment
@@ -189,51 +214,56 @@ const EditRecipePage = () => {
           Ingredients
         </Typography>
         {ingredients.map((ingredient, index) => (
-          <div key={index} className="flex items-center mb-2">
-            <TextField
-              label={`Ingredient ${index + 1}`}
-              variant="outlined"
-              fullWidth
-              value={ingredient.productName}
-              onChange={(e) => {
-                const newIngredients = [...ingredients];
-                newIngredients[index].productName = e.target.value;
-                setIngredients(newIngredients);
-              }}
-              className="mr-2"
-            />
-            <TextField
-              label="Quantity"
-              variant="outlined"
-              fullWidth
-              type="number"
-              value={ingredient.quantity}
-              onChange={(e) => {
-                const newIngredients = [...ingredients];
-                newIngredients[index].quantity = Number(e.target.value);
-                setIngredients(newIngredients);
-              }}
-              className="mr-2"
-            />
-            <TextField
-              label="Unit"
-              variant="outlined"
-              fullWidth
-              value={ingredient.unit}
-              onChange={(e) => {
-                const newIngredients = [...ingredients];
-                newIngredients[index].unit = e.target.value;
-                setIngredients(newIngredients);
-              }}
-              className="mr-2"
-            />
-            <IconButton
-              color="secondary"
-              onClick={() => handleRemoveIngredient(index)}
-            >
-              <RemoveCircleOutline />
-            </IconButton>
-          </div>
+          <Grid container spacing={2} key={index} className="mb-2">
+            <Grid item xs={12} md={4}>
+              <TextField
+                label={`Ingredient ${index + 1}`}
+                variant="outlined"
+                fullWidth
+                value={ingredient.productName}
+                onChange={(e) => {
+                  const newIngredients = [...ingredients];
+                  newIngredients[index].productName = e.target.value;
+                  setIngredients(newIngredients);
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Quantity"
+                variant="outlined"
+                fullWidth
+                type="number"
+                value={ingredient.quantity}
+                onChange={(e) => {
+                  const newIngredients = [...ingredients];
+                  newIngredients[index].quantity = Number(e.target.value);
+                  setIngredients(newIngredients);
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                label="Unit"
+                variant="outlined"
+                fullWidth
+                value={ingredient.unit}
+                onChange={(e) => {
+                  const newIngredients = [...ingredients];
+                  newIngredients[index].unit = e.target.value;
+                  setIngredients(newIngredients);
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={1} className="flex items-center">
+              <IconButton
+                color="secondary"
+                onClick={() => handleRemoveIngredient(index)}
+              >
+                <RemoveCircleOutline />
+              </IconButton>
+            </Grid>
+          </Grid>
         ))}
         <Button
           variant="outlined"
@@ -249,27 +279,30 @@ const EditRecipePage = () => {
           Procedure
         </Typography>
         {procedure.map((step, index) => (
-          <div key={index} className="flex items-center mb-2">
-            <TextField
-              label={`Step ${index + 1}`}
-              variant="outlined"
-              fullWidth
-              multiline
-              value={step}
-              onChange={(e) => {
-                const newProcedure = [...procedure];
-                newProcedure[index] = e.target.value;
-                setProcedure(newProcedure);
-              }}
-              className="mr-2"
-            />
-            <IconButton
-              color="secondary"
-              onClick={() => handleRemoveStep(index)}
-            >
-              <RemoveCircleOutline />
-            </IconButton>
-          </div>
+          <Grid container spacing={2} key={index} className="mb-2">
+            <Grid item xs={12} md={11}>
+              <TextField
+                label={`Step ${index + 1}`}
+                variant="outlined"
+                fullWidth
+                multiline
+                value={step}
+                onChange={(e) => {
+                  const newProcedure = [...procedure];
+                  newProcedure[index] = e.target.value;
+                  setProcedure(newProcedure);
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} md={1} className="flex items-center">
+              <IconButton
+                color="secondary"
+                onClick={() => handleRemoveStep(index)}
+              >
+                <RemoveCircleOutline />
+              </IconButton>
+            </Grid>
+          </Grid>
         ))}
         <Button
           variant="outlined"
@@ -281,30 +314,38 @@ const EditRecipePage = () => {
           Add Step
         </Button>
 
-        <TextField
-          label="Yield"
-          variant="outlined"
-          fullWidth
-          value={yieldAmount}
-          onChange={(e) => setYieldAmount(e.target.value)}
-          className="mb-4"
-        />
-        <TextField
-          label="Portion Size"
-          variant="outlined"
-          fullWidth
-          value={portionSize}
-          onChange={(e) => setPortionSize(e.target.value)}
-          className="mb-4"
-        />
-        <TextField
-          label="Portions Per Recipe"
-          variant="outlined"
-          fullWidth
-          value={portionsPerRecipe}
-          onChange={(e) => setPortionsPerRecipe(e.target.value)}
-          className="mb-4"
-        />
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={4}>
+            <TextField
+              label="Yield"
+              variant="outlined"
+              fullWidth
+              value={yieldAmount}
+              onChange={(e) => setYieldAmount(e.target.value)}
+              className="mb-4"
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              label="Portion Size"
+              variant="outlined"
+              fullWidth
+              value={portionSize}
+              onChange={(e) => setPortionSize(e.target.value)}
+              className="mb-4"
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              label="Portions Per Recipe"
+              variant="outlined"
+              fullWidth
+              value={portionsPerRecipe}
+              onChange={(e) => setPortionsPerRecipe(e.target.value)}
+              className="mb-4"
+            />
+          </Grid>
+        </Grid>
 
         <div className="flex justify-end">
           <Button variant="contained" color="primary" onClick={handleSave}>

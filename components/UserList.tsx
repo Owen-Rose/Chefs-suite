@@ -1,211 +1,124 @@
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
-  Container,
-  Typography,
+  TextField,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Avatar,
   IconButton,
-  CircularProgress,
-  Snackbar,
-  Alert,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
+  Paper,
+  Typography,
+  Divider,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
 } from "@mui/material";
-import { Add, Edit, Delete } from "@mui/icons-material";
-import { styled } from "@mui/system";
-import { User } from "../types/User";
+import { Search, Add, Kitchen } from "@mui/icons-material";
+import Link from "next/link";
+import { Recipe } from "@/types/Recipe";
 
-const ContainerStyled = styled(Container)(({ theme }) => ({
-  padding: "2rem",
-  backgroundColor: "#f4f6f8",
-  minHeight: "100vh",
-}));
-
-const HeaderStyled = styled("div")({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: "1rem",
-});
-
-const TableStyled = styled(Table)(({ theme }) => ({
-  minWidth: 650,
-  backgroundColor: "#ffffff",
-  borderRadius: "8px",
-}));
-
-const ActionsStyled = styled("div")({
-  display: "flex",
-  gap: "0.5rem",
-});
-
-const Title = styled(Typography)(({ theme }) => ({
-  color: "#333",
-  fontWeight: "bold",
-  marginBottom: "1rem",
-}));
-
-const AddButton = styled(Button)(({ theme }) => ({
-  backgroundColor: "#1976d2",
-  color: "#ffffff",
-  "&:hover": {
-    backgroundColor: "#115293",
-  },
-}));
-
-const UserList = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+const HomePage = () => {
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [search, setSearch] = useState("");
+  const [station, setStation] = useState("");
+  const [stations, setStations] = useState<string[]>([]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch("/api/users");
-        const data: User[] = await response.json();
-        setUsers(data);
-      } catch (error) {
-        setError("Error fetching users.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUsers();
+    fetch("/api/recipes")
+      .then((res) => res.json())
+      .then((data: Recipe[]) => {
+        setRecipes(data);
+        const uniqueStations = Array.from(
+          new Set(data.map((recipe) => recipe.station))
+        );
+        setStations(uniqueStations);
+      })
+      .catch((error) => console.error("Error fetching recipes: ", error));
   }, []);
 
-  const handleDelete = async (id: string) => {
-    try {
-      await fetch(`/api/users/${id}`, {
-        method: "DELETE",
-      });
-      setUsers(users.filter((user) => user.uid !== id));
-      setSuccess("User deleted successfully.");
-    } catch (error) {
-      setError("Error deleting user.");
-    }
-  };
-
-  const handleOpenDialog = (user: User) => {
-    setSelectedUser(user);
-    setOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setOpen(false);
-    setSelectedUser(null);
-  };
+  const filteredRecipes = recipes
+    .filter((recipe) =>
+      recipe.name.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter((recipe) => (station ? recipe.station === station : true));
 
   return (
-    <ContainerStyled>
-      <HeaderStyled>
-        <Title variant="h4">User Management</Title>
-        <Link href="/users/add" passHref>
-          <AddButton variant="contained" startIcon={<Add />}>
-            Add User
-          </AddButton>
-        </Link>
-      </HeaderStyled>
-      {loading ? (
-        <CircularProgress />
-      ) : error ? (
-        <Alert severity="error">{error}</Alert>
-      ) : (
-        <TableContainer component={Paper}>
-          <TableStyled aria-label="user table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Email</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.uid}>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <ActionsStyled>
-                      <Link href={`/users/${user.uid}`} passHref>
-                        <IconButton color="primary">
-                          <Edit />
-                        </IconButton>
-                      </Link>
-                      <IconButton
-                        color="secondary"
-                        onClick={() => handleOpenDialog(user)}
-                      >
-                        <Delete />
-                      </IconButton>
-                    </ActionsStyled>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </TableStyled>
-        </TableContainer>
-      )}
-      <Snackbar
-        open={!!success}
-        autoHideDuration={6000}
-        onClose={() => setSuccess(null)}
-      >
-        <Alert onClose={() => setSuccess(null)} severity="success">
-          {success}
-        </Alert>
-      </Snackbar>
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={() => setError(null)}
-      >
-        <Alert onClose={() => setError(null)} severity="error">
-          {error}
-        </Alert>
-      </Snackbar>
-      <Dialog
-        open={open}
-        onClose={handleCloseDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">Delete User</DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            Are you sure you want to delete the user {selectedUser?.email}?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} color="primary">
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              if (selectedUser) {
-                handleDelete(selectedUser.uid);
-                handleCloseDialog();
-              }
+    <div className="p-8 bg-gray-50 min-h-screen">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center w-full md:w-1/3">
+          <TextField
+            label="Search Recipes"
+            variant="outlined"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full"
+            InputProps={{
+              endAdornment: (
+                <IconButton>
+                  <Search />
+                </IconButton>
+              ),
             }}
-            color="secondary"
-            autoFocus
+          />
+        </div>
+        <FormControl variant="outlined" className="w-full md:w-1/3 ml-4">
+          <InputLabel>Station</InputLabel>
+          <Select
+            value={station}
+            onChange={(e) => setStation(e.target.value)}
+            label="Station"
           >
-            Delete
+            <MenuItem value="">
+              <em>All</em>
+            </MenuItem>
+            {stations.map((station) => (
+              <MenuItem key={station} value={station}>
+                {station}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Link href="/add">
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<Add />}
+            className="ml-4"
+          >
+            Add Recipe
           </Button>
-        </DialogActions>
-      </Dialog>
-    </ContainerStyled>
+        </Link>
+      </div>
+      <Paper elevation={3} className="p-4">
+        <Typography variant="h6" className="mb-4">
+          Recipes
+        </Typography>
+        <List>
+          {filteredRecipes.map((recipe) => (
+            <div key={recipe._id} className="mb-4">
+              <Link href={`/recipe/${recipe._id}`} passHref>
+                <ListItem className="hover:bg-gray-100 transition-colors duration-300 rounded-lg p-4 shadow-md cursor-pointer">
+                  <ListItemAvatar>
+                    <Avatar>
+                      <Kitchen />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={recipe.name}
+                    secondary={recipe.description || "No description available"}
+                  />
+                </ListItem>
+              </Link>
+              <Divider />
+            </div>
+          ))}
+        </List>
+      </Paper>
+    </div>
   );
 };
 
-export default UserList;
+export default HomePage;

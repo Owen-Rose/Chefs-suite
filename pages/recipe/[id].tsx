@@ -40,6 +40,21 @@ const RecipeDetailsPage = ({ recipe }: { recipe: Recipe }) => {
 
   if (!recipe) return <div>Loading...</div>;
 
+  const handleDelete = async () => {
+    try {
+      const response = await fetch(`/api/recipes/${recipe._id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        router.push("/");
+      } else {
+        console.error("Failed to delete recipe");
+      }
+    } catch (error) {
+      console.error("Error deleting recipe:", error);
+    }
+  };
+
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <Paper elevation={3} className="p-6 mb-6">
@@ -132,13 +147,7 @@ const RecipeDetailsPage = ({ recipe }: { recipe: Recipe }) => {
           >
             Edit
           </Button>
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => {
-              // Implement delete functionality
-            }}
-          >
+          <Button variant="contained" color="secondary" onClick={handleDelete}>
             Delete
           </Button>
         </div>
@@ -157,9 +166,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
   let recipe;
   try {
-    recipe = await db
-      .collection("recipes")
-      .findOne({ _id: new ObjectId(id as string) });
+    recipe = await db.collection("recipes").findOne({ _id: new ObjectId(id) });
   } catch (error) {
     console.error("Error fetching recipe:", error);
     recipe = null;
