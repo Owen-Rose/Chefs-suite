@@ -14,4 +14,5 @@ export interface Recipe {
   portionsPerRecipe: string;
   procedure: string[];
   description?: string;
+  prepTime?: string;
 }
