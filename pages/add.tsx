@@ -10,7 +10,6 @@ import {
 import { AddCircleOutline, RemoveCircleOutline } from "@mui/icons-material";
 import { Recipe } from "../types/Recipe";
 import { Ingredient } from "../types/Ingredient";
-import { ObjectId } from "mongodb";
 
 const AddRecipePage = () => {
   const router = useRouter();
@@ -23,7 +22,7 @@ const AddRecipePage = () => {
   const handleAddIngredient = () => {
     setIngredients([
       ...ingredients,
-      { id: 0, productName: "", quantity: 0, unit: "" },
+      { id: Date.now(), productName: "", quantity: 0, unit: "" },
     ]);
   };
 
@@ -51,9 +50,8 @@ const AddRecipePage = () => {
     setProcedure(newProcedure);
   };
 
-  const handleSave = () => {
-    const newRecipe: Recipe = {
-      _id: new ObjectId().toHexString(), // Generate a new ObjectID
+  const handleSave = async () => {
+    const newRecipe: Omit<Recipe, "_id"> = {
       name,
       createdDate: new Date().toISOString(),
       version: "1.0",
@@ -67,9 +65,23 @@ const AddRecipePage = () => {
       procedure,
     };
 
-    // Save the new recipe (e.g., to a state management store or API)
-    // Redirect to home page after saving
-    router.push("/");
+    try {
+      const response = await fetch("/api/recipes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newRecipe),
+      });
+
+      if (response.ok) {
+        router.push("/");
+      } else {
+        console.error("Failed to save the recipe");
+      }
+    } catch (error) {
+      console.error("An error occurred while saving the recipe:", error);
+    }
   };
 
   return (

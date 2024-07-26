@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export default async function handler(
   req: NextApiRequest,
@@ -19,6 +20,8 @@ export default async function handler(
     case "POST":
       try {
         const newRecipe = req.body;
+        newRecipe._id = new ObjectId(newRecipe._id); // Ensure _id is an ObjectId
+
         const result = await db.collection("recipes").insertOne(newRecipe);
         const insertedRecipe = await db
           .collection("recipes")

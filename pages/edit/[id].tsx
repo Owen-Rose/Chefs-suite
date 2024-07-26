@@ -81,8 +81,7 @@ const EditRecipePage = () => {
   };
 
   const handleSave = async () => {
-    const updatedRecipe: Recipe = {
-      _id: id as string,
+    const updatedRecipe: Omit<Recipe, "_id"> = {
       name,
       createdDate,
       version,
@@ -106,8 +105,8 @@ const EditRecipePage = () => {
       if (response.ok) {
         router.push("/");
       } else {
-        const error = await response.json();
-        console.error("Failed to update recipe:", error.message);
+        const error = await response.text();
+        console.error("Failed to update recipe:", error);
       }
     } catch (error) {
       console.error("Error updating recipe:", error);
