@@ -162,8 +162,8 @@ const HomePage: React.FC = () => {
                       className="bg-blue-100 text-blue-800"
                     />
                   </TableCell>
-                  <TableCell>{recipe.prepTime || "N/A"}</TableCell>
-                  <TableCell>{recipe.servings || "N/A"}</TableCell>
+                  <TableCell>{recipe.createdDate || "N/A"}</TableCell>
+                  <TableCell>{recipe.version || "N/A"}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
                       <Tooltip title="View Details">
