@@ -1,30 +1,41 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   TextField,
   Button,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Avatar,
-  IconButton,
   Paper,
   Typography,
-  Divider,
   Select,
   MenuItem,
   InputLabel,
   FormControl,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
-import { Search, Add, Kitchen } from "@mui/icons-material";
+import {
+  Search,
+  Add,
+  Restaurant,
+  AccessTime,
+  Description,
+  Print,
+  Edit,
+} from "@mui/icons-material";
 import Link from "next/link";
 import { Recipe } from "@/types/Recipe";
 
-const HomePage = () => {
+const HomePage: React.FC = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [search, setSearch] = useState("");
   const [station, setStation] = useState("");
   const [stations, setStations] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState("name");
 
   useEffect(() => {
     fetch("/api/recipes/")
@@ -39,84 +50,155 @@ const HomePage = () => {
       .catch((error) => console.error("Error fetching recipes: ", error));
   }, []);
 
-  const filteredRecipes = recipes
+  const filteredAndSortedRecipes = recipes
     .filter((recipe) =>
       recipe.name.toLowerCase().includes(search.toLowerCase())
     )
-    .filter((recipe) => (station ? recipe.station === station : true));
+    .filter((recipe) => (station ? recipe.station === station : true))
+    .sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "station") return a.station.localeCompare(b.station);
+      if (sortBy === "prepTime")
+        return (a.prepTime || "").localeCompare(b.prepTime || "");
+      return 0;
+    });
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center w-full md:w-1/3">
-          <TextField
-            label="Search Recipes"
-            variant="outlined"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full"
-            InputProps={{
-              endAdornment: (
-                <IconButton>
-                  <Search />
-                </IconButton>
-              ),
-            }}
-          />
+    <div className="min-h-screen bg-gray-100">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <Typography
+            variant="h4"
+            component="h1"
+            className="font-bold text-gray-800"
+          >
+            Recipe Management System
+          </Typography>
+          <Link href="/add">
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Add />}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Add New Recipe
+            </Button>
+          </Link>
         </div>
-        <FormControl variant="outlined" className="w-full md:w-1/3 ml-4">
-          <InputLabel>Station</InputLabel>
-          <Select
-            value={station}
-            onChange={(e) => setStation(e.target.value)}
-            label="Station"
-          >
-            <MenuItem value="">
-              <em>All</em>
-            </MenuItem>
-            {stations.map((station) => (
-              <MenuItem key={station} value={station}>
-                {station}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <Link href="/add">
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<Add />}
-            className="ml-4"
-          >
-            Add Recipe
-          </Button>
-        </Link>
+
+        <Paper elevation={3} className="p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <TextField
+              label="Search Recipes"
+              variant="outlined"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              fullWidth
+              InputProps={{
+                startAdornment: <Search className="text-gray-400 mr-2" />,
+              }}
+            />
+            <FormControl variant="outlined" fullWidth>
+              <InputLabel>Filter by Station</InputLabel>
+              <Select
+                value={station}
+                onChange={(e) => setStation(e.target.value)}
+                label="Filter by Station"
+              >
+                <MenuItem value="">
+                  <em>All Stations</em>
+                </MenuItem>
+                {stations.map((station) => (
+                  <MenuItem key={station} value={station}>
+                    {station}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl variant="outlined" fullWidth>
+              <InputLabel>Sort by</InputLabel>
+              <Select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                label="Sort by"
+              >
+                <MenuItem value="name">Name</MenuItem>
+                <MenuItem value="station">Station</MenuItem>
+                <MenuItem value="prepTime">Prep Time</MenuItem>
+              </Select>
+            </FormControl>
+          </div>
+        </Paper>
+
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow className="bg-gray-200">
+                <TableCell>
+                  <strong>Name</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Station</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Prep Time</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Servings</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Actions</strong>
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredAndSortedRecipes.map((recipe) => (
+                <TableRow key={recipe._id} className="hover:bg-gray-50">
+                  <TableCell>{recipe.name}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={recipe.station}
+                      size="small"
+                      className="bg-blue-100 text-blue-800"
+                    />
+                  </TableCell>
+                  <TableCell>{recipe.prepTime || "N/A"}</TableCell>
+                  <TableCell>{recipe.servings || "N/A"}</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Tooltip title="View Details">
+                        <IconButton
+                          component={Link}
+                          href={`/recipe/${recipe._id}`}
+                        >
+                          <Description />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Edit Recipe">
+                        <IconButton
+                          component={Link}
+                          href={`/recipe/${recipe._id}/edit`}
+                        >
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Print Recipe">
+                        <IconButton
+                          onClick={() => {
+                            /* Implement print functionality */
+                          }}
+                        >
+                          <Print />
+                        </IconButton>
+                      </Tooltip>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </div>
-      <Paper elevation={3} className="p-4">
-        <Typography variant="h6" className="mb-4">
-          Recipes
-        </Typography>
-        <List>
-          {filteredRecipes.map((recipe) => (
-            <div key={recipe._id} className="mb-4">
-              <Link href={`/recipe/${recipe._id}`} passHref>
-                <ListItem className="hover:bg-gray-100 transition-colors duration-300 rounded-lg p-4 shadow-md cursor-pointer">
-                  <ListItemAvatar>
-                    <Avatar>
-                      <Kitchen />
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={recipe.name}
-                    secondary={recipe.description || "No description available"}
-                  />
-                </ListItem>
-              </Link>
-              <Divider />
-            </div>
-          ))}
-        </List>
-      </Paper>
     </div>
   );
 };
