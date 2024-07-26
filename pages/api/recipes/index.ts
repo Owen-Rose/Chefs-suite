@@ -1,4 +1,3 @@
-// /pages/api/recipes/index.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
 
@@ -21,7 +20,10 @@ export default async function handler(
       try {
         const newRecipe = req.body;
         const result = await db.collection("recipes").insertOne(newRecipe);
-        res.status(201).json(result.ops[0]);
+        const insertedRecipe = await db
+          .collection("recipes")
+          .findOne({ _id: result.insertedId });
+        res.status(201).json(insertedRecipe);
       } catch (error) {
         res.status(500).json({ error: "Failed to create recipe" });
       }

@@ -5,7 +5,7 @@ interface RecipeContextType {
   recipes: Recipe[];
   addRecipe: (recipe: Recipe) => void;
   updateRecipe: (updatedRecipe: Recipe) => void;
-  deleteRecipe: (id: number) => void;
+  deleteRecipe: (id: string) => void;
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
@@ -20,13 +20,13 @@ const RecipeProvider = ({ children }: { children: ReactNode }) => {
   const updateRecipe = (updatedRecipe: Recipe) => {
     setRecipes(
       recipes.map((recipe) =>
-        recipe.id === updatedRecipe.id ? updatedRecipe : recipe
+        recipe._id === updatedRecipe._id ? updatedRecipe : recipe
       )
     );
   };
 
-  const deleteRecipe = (id: number) => {
-    setRecipes(recipes.filter((recipe) => recipe.id !== id));
+  const deleteRecipe = (id: string) => {
+    setRecipes(recipes.filter((recipe) => recipe._id !== id));
   };
 
   return (

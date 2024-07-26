@@ -10,6 +10,7 @@ import {
 import { AddCircleOutline, RemoveCircleOutline } from "@mui/icons-material";
 import { Recipe } from "../types/Recipe";
 import { Ingredient } from "../types/Ingredient";
+import { ObjectId } from "mongodb";
 
 const AddRecipePage = () => {
   const router = useRouter();
@@ -52,7 +53,7 @@ const AddRecipePage = () => {
 
   const handleSave = () => {
     const newRecipe: Recipe = {
-      id: Date.now(), // Replace with actual ID generation logic
+      _id: new ObjectId().toHexString(), // Generate a new ObjectID
       name,
       createdDate: new Date().toISOString(),
       version: "1.0",
