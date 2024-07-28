@@ -1,6 +1,6 @@
 // pages/index.tsx
-import ProtectedRoute from '../components/ProtectedRoute';
-import HomePage from '../components/HomePage';
+import ProtectedRoute from "../components/ProtectedRoute";
+import HomePage from "../components/HomePage";
 
 const IndexPage = () => {
   return (

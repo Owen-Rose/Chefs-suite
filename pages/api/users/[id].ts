@@ -47,24 +47,35 @@ const handleUpdateUser = async (
   db: Db,
   id: string
 ) => {
-  const { email, password, ...rest } = req.body;
+  const { email, password, role, ...rest } = req.body;
 
   try {
-    const updatedUser = await auth.updateUser(id, {
-      email,
-      password,
-      ...rest,
-    });
+    // Update user in Firebase
+    const updateParams: any = {};
+    if (email) updateParams.email = email;
+    if (password) updateParams.password = password;
 
+    const updatedFirebaseUser = await auth.updateUser(id, updateParams);
+
+    // Prepare update for MongoDB (exclude password)
+    const updateData = {
+      email: updatedFirebaseUser.email,
+      role,
+      ...rest,
+    };
+
+    // Update user in MongoDB
     const updateResult = await db
       .collection("users")
-      .updateOne({ uid: id }, { $set: { email, password, ...rest } });
+      .updateOne({ uid: id }, { $set: updateData });
 
     if (updateResult.modifiedCount === 0) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.status(200).json(updatedUser);
+    res
+      .status(200)
+      .json({ message: "User updated successfully", user: updateData });
   } catch (error) {
     if (error instanceof Error) {
       res.status(400).json({ error: error.message });

@@ -1,7 +1,7 @@
 import { Ingredient } from "./Ingredient";
 
 export interface Recipe {
-  _id: string;
+  _id?: string;
   name: string;
   createdDate: string;
   version: string;
@@ -14,4 +14,5 @@ export interface Recipe {
   portionsPerRecipe: string;
   procedure: string[];
   description?: string;
+  foodCost?: number;
 }

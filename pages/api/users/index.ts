@@ -26,24 +26,29 @@ const handleCreateUser = async (
   res: NextApiResponse,
   db: Db
 ) => {
-  const { email, password, ...rest } = req.body;
+  const { email, password, role, ...rest } = req.body;
 
   try {
+    // Create user in Firebase
     const userRecord = await auth.createUser({
       email,
       password,
-      ...rest,
     });
 
+    // Prepare user data for MongoDB (exclude password)
     const newUser = {
       uid: userRecord.uid,
       email,
-      password,
+      role,
       ...rest,
     };
 
+    // Insert user into MongoDB
     await db.collection("users").insertOne(newUser);
-    res.status(201).json(newUser);
+
+    res
+      .status(201)
+      .json({ message: "User created successfully", user: newUser });
   } catch (error) {
     if (error instanceof Error) {
       res.status(400).json({ error: error.message });

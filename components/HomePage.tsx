@@ -58,8 +58,6 @@ const HomePage: React.FC = () => {
     .sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name);
       if (sortBy === "station") return a.station.localeCompare(b.station);
-      if (sortBy === "prepTime")
-        return (a.prepTime || "").localeCompare(b.prepTime || "");
       return 0;
     });
 
@@ -124,7 +122,6 @@ const HomePage: React.FC = () => {
               >
                 <MenuItem value="name">Name</MenuItem>
                 <MenuItem value="station">Station</MenuItem>
-                <MenuItem value="prepTime">Prep Time</MenuItem>
               </Select>
             </FormControl>
           </div>
@@ -141,10 +138,10 @@ const HomePage: React.FC = () => {
                   <strong>Station</strong>
                 </TableCell>
                 <TableCell>
-                  <strong>Prep Time</strong>
+                  <strong>Date Created</strong>
                 </TableCell>
                 <TableCell>
-                  <strong>Servings</strong>
+                  <strong>Version</strong>
                 </TableCell>
                 <TableCell>
                   <strong>Actions</strong>
@@ -162,8 +159,8 @@ const HomePage: React.FC = () => {
                       className="bg-blue-100 text-blue-800"
                     />
                   </TableCell>
-                  <TableCell>{recipe.prepTime || "N/A"}</TableCell>
-                  <TableCell>{recipe.servings || "N/A"}</TableCell>
+                  <TableCell>{recipe.createdDate || "N/A"}</TableCell>
+                  <TableCell>{recipe.version || "N/A"}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
                       <Tooltip title="View Details">
@@ -177,7 +174,7 @@ const HomePage: React.FC = () => {
                       <Tooltip title="Edit Recipe">
                         <IconButton
                           component={Link}
-                          href={`/recipe/${recipe._id}/edit`}
+                          href={`/edit/${recipe._id}`}
                         >
                           <Edit />
                         </IconButton>

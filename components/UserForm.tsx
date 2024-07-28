@@ -1,5 +1,5 @@
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { useState, useEffect, FormEvent } from "react";
 import {
   Container,
   Typography,
@@ -7,157 +7,175 @@ import {
   Button,
   Paper,
   CircularProgress,
-  Snackbar,
-  Alert,
+  MenuItem,
+  Box,
 } from "@mui/material";
 import { styled } from "@mui/system";
-
-const ContainerStyled = styled(Container)(({ theme }) => ({
-  padding: "2rem",
-  backgroundColor: "#f4f6f8",
-  minHeight: "100vh",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-}));
+import { Person, Email, Lock } from "@mui/icons-material";
 
 const FormPaper = styled(Paper)(({ theme }) => ({
   padding: "2rem",
   maxWidth: "500px",
   width: "100%",
   backgroundColor: "#ffffff",
-  borderRadius: "8px",
+  borderRadius: "12px",
+  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
 }));
 
 const Title = styled(Typography)(({ theme }) => ({
-  color: "#333",
   fontWeight: "bold",
-  marginBottom: "1rem",
+  marginBottom: "1.5rem",
   textAlign: "center",
 }));
 
-interface UserFormProps {
-  userId?: string | null;
-}
+const MessageBox = styled(Box)<{ severity: "success" | "error" }>(
+  ({ theme, severity }) => ({
+    padding: "1rem",
+    marginBottom: "1rem",
+    borderRadius: "4px",
+    backgroundColor: severity === "success" ? "#e8f5e9" : "#ffebee",
+    color: severity === "success" ? "#1b5e20" : "#b71c1c",
+  })
+);
 
-const UserForm = ({ userId = null }: UserFormProps) => {
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>("");
-  const [success, setSuccess] = useState<string>("");
+const roles = ["User", "Admin", "Manager"];
+
+type UserFormProps = {
+  userId?: string | null;
+};
+
+type FormData = {
+  email: string;
+  password: string;
+  role: string;
+};
+
+type Message = {
+  type: "success" | "error";
+  content: string;
+};
+
+const UserForm: React.FC<UserFormProps> = ({ userId = null }) => {
+  const [formData, setFormData] = useState<FormData>({
+    email: "",
+    password: "",
+    role: "User",
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<Message | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     if (userId) {
-      const fetchUser = async () => {
-        try {
-          const response = await fetch(`/api/users/${userId}`);
-          const data = await response.json();
-          const { email } = data;
-          setEmail(email);
-        } catch (error) {
-          setError("Error fetching user.");
-        } finally {
+      setLoading(true);
+      fetch(`/api/users/${userId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setFormData({ ...data, password: "" });
           setLoading(false);
-        }
-      };
-
-      fetchUser();
-    } else {
-      setLoading(false);
+        })
+        .catch(() => {
+          setMessage({ type: "error", content: "Error fetching user data." });
+          setLoading(false);
+        });
     }
   }, [userId]);
 
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setLoading(true);
     try {
-      if (userId) {
-        await fetch(`/api/users/${userId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        });
-      } else {
-        await fetch("/api/users", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        });
-      }
-      setSuccess(`User ${userId ? "updated" : "created"} successfully.`);
-      setTimeout(() => {
-        router.push("/users");
-      }, 2000);
-    } catch (error) {
-      setError("Error submitting form.");
+      const url = userId ? `/api/users/${userId}` : "/api/users";
+      const method = userId ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (!res.ok) throw new Error("Failed to save user");
+      setMessage({
+        type: "success",
+        content: `User ${userId ? "updated" : "created"} successfully.`,
+      });
+      setTimeout(() => router.push("/users"), 2000);
+    } catch (error: any) {
+      setMessage({ type: "error", content: error.message });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ContainerStyled>
+    <Container maxWidth="sm" sx={{ py: 4 }}>
       <FormPaper elevation={3}>
-        <Title variant="h5">{userId ? "Edit User" : "Create User"}</Title>
+        <Title variant="h4">{userId ? "Edit User" : "Create User"}</Title>
+        {message && (
+          <MessageBox severity={message.type}>{message.content}</MessageBox>
+        )}
         {loading ? (
-          <CircularProgress />
+          <Box display="flex" justifyContent="center">
+            <CircularProgress />
+          </Box>
         ) : (
           <form onSubmit={handleSubmit}>
             <TextField
               label="Email"
+              name="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleChange}
               required
               fullWidth
               margin="normal"
+              InputProps={{ startAdornment: <Email color="action" /> }}
             />
             <TextField
               label="Password"
+              name="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleChange}
               required={!userId}
               fullWidth
               margin="normal"
+              InputProps={{ startAdornment: <Lock color="action" /> }}
             />
+            <TextField
+              select
+              label="Role"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              required
+              fullWidth
+              margin="normal"
+              InputProps={{ startAdornment: <Person color="action" /> }}
+            >
+              {roles.map((role) => (
+                <MenuItem key={role} value={role}>
+                  {role}
+                </MenuItem>
+              ))}
+            </TextField>
             <Button
               type="submit"
               variant="contained"
               color="primary"
               fullWidth
-              sx={{ mt: 2 }}
+              size="large"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
             >
               {userId ? "Update User" : "Create User"}
             </Button>
           </form>
         )}
       </FormPaper>
-      <Snackbar
-        open={!!success}
-        autoHideDuration={6000}
-        onClose={() => setSuccess("")}
-      >
-        <Alert onClose={() => setSuccess("")} severity="success">
-          {success}
-        </Alert>
-      </Snackbar>
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={() => setError("")}
-      >
-        <Alert onClose={() => setError("")} severity="error">
-          {error}
-        </Alert>
-      </Snackbar>
-    </ContainerStyled>
+    </Container>
   );
 };
 

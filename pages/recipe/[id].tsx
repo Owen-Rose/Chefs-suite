@@ -13,6 +13,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  Snackbar,
 } from "@mui/material";
 import { Edit, Delete, Print, ArrowBack } from "@mui/icons-material";
 import { connectToDatabase } from "../../lib/mongodb";
@@ -41,10 +42,12 @@ interface Recipe {
   procedure: string[];
 }
 
-const RecipeDetailsPage: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
+const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
   const router = useRouter();
+  const [snackbarOpen, setSnackbarOpen] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState("");
 
-  if (!recipe) return <div>Loading...</div>;
+  if (!recipe) return <div>Recipe not found</div>;
 
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this recipe?")) {
@@ -55,10 +58,15 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
         if (response.ok) {
           router.push("/");
         } else {
-          console.error("Failed to delete recipe");
+          const error = await response.text();
+          console.error("Failed to delete recipe:", error);
+          setErrorMessage("Failed to delete recipe. Please try again.");
+          setSnackbarOpen(true);
         }
       } catch (error) {
         console.error("Error deleting recipe:", error);
+        setErrorMessage("An error occurred while deleting. Please try again.");
+        setSnackbarOpen(true);
       }
     }
   };
@@ -73,7 +81,7 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
               component="h1"
               className="font-bold text-gray-800"
             >
-              {recipe.name}
+              {recipe.name || "Untitled Recipe"}
             </Typography>
             <div className="flex space-x-2">
               <Tooltip title="Back to Recipes">
@@ -118,41 +126,49 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
                       Created Date:
                     </Typography>
                     <Typography variant="body1">
-                      {recipe.createdDate}
+                      {recipe.createdDate || "N/A"}
                     </Typography>
                   </div>
                   <div className="flex justify-between">
                     <Typography variant="body1" color="textSecondary">
                       Version:
                     </Typography>
-                    <Typography variant="body1">{recipe.version}</Typography>
+                    <Typography variant="body1">
+                      {recipe.version || "N/A"}
+                    </Typography>
                   </div>
                   <div className="flex justify-between">
                     <Typography variant="body1" color="textSecondary">
                       Station:
                     </Typography>
-                    <Chip label={recipe.station} color="primary" size="small" />
+                    <Chip
+                      label={recipe.station || "N/A"}
+                      color="primary"
+                      size="small"
+                    />
                   </div>
                   <div className="flex justify-between">
                     <Typography variant="body1" color="textSecondary">
                       Batch Number:
                     </Typography>
                     <Typography variant="body1">
-                      {recipe.batchNumber}
+                      {recipe.batchNumber || "N/A"}
                     </Typography>
                   </div>
                   <div className="flex justify-between">
                     <Typography variant="body1" color="textSecondary">
                       Yield:
                     </Typography>
-                    <Typography variant="body1">{recipe.yield}</Typography>
+                    <Typography variant="body1">
+                      {recipe.yield || "N/A"}
+                    </Typography>
                   </div>
                   <div className="flex justify-between">
                     <Typography variant="body1" color="textSecondary">
                       Portion Size:
                     </Typography>
                     <Typography variant="body1">
-                      {recipe.portionSize}
+                      {recipe.portionSize || "N/A"}
                     </Typography>
                   </div>
                   <div className="flex justify-between">
@@ -160,7 +176,7 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
                       Portions Per Recipe:
                     </Typography>
                     <Typography variant="body1">
-                      {recipe.portionsPerRecipe}
+                      {recipe.portionsPerRecipe || "N/A"}
                     </Typography>
                   </div>
                 </div>
@@ -177,11 +193,17 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
                   Equipment
                 </Typography>
                 <List dense>
-                  {recipe.equipment.map((item, index) => (
-                    <ListItem key={index} className="pl-0">
-                      <ListItemText primary={item} />
+                  {(recipe.equipment || []).length > 0 ? (
+                    recipe.equipment.map((item, index) => (
+                      <ListItem key={index} className="pl-0">
+                        <ListItemText primary={item} />
+                      </ListItem>
+                    ))
+                  ) : (
+                    <ListItem className="pl-0">
+                      <ListItemText primary="No equipment listed" />
                     </ListItem>
-                  ))}
+                  )}
                 </List>
               </Paper>
             </Grid>
@@ -196,16 +218,29 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
                   Ingredients
                 </Typography>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recipe.ingredients.map((ingredient, index) => (
-                    <Paper key={index} elevation={1} className="p-3">
-                      <Typography variant="subtitle1" className="font-semibold">
-                        {ingredient.productName}
-                      </Typography>
-                      <Typography variant="body2">
-                        {`${ingredient.quantity} ${ingredient.unit}`}
+                  {(recipe.ingredients || []).length > 0 ? (
+                    recipe.ingredients.map((ingredient, index) => (
+                      <Paper key={index} elevation={1} className="p-3">
+                        <Typography
+                          variant="subtitle1"
+                          className="font-semibold"
+                        >
+                          {ingredient.productName || "Unnamed Ingredient"}
+                        </Typography>
+                        <Typography variant="body2">
+                          {`${ingredient.quantity || 0} ${
+                            ingredient.unit || ""
+                          }`}
+                        </Typography>
+                      </Paper>
+                    ))
+                  ) : (
+                    <Paper elevation={1} className="p-3">
+                      <Typography variant="subtitle1">
+                        No ingredients listed
                       </Typography>
                     </Paper>
-                  ))}
+                  )}
                 </div>
               </Paper>
             </Grid>
@@ -220,24 +255,45 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
                   Procedure
                 </Typography>
                 <List>
-                  {recipe.procedure.map((step, index) => (
-                    <ListItem key={index} className="pl-0">
+                  {(recipe.procedure || []).length > 0 ? (
+                    recipe.procedure.map((step, index) => (
+                      <ListItem key={index} className="pl-0">
+                        <ListItemText
+                          primary={
+                            <Typography
+                              variant="body1"
+                              className="font-semibold"
+                            >
+                              Step {index + 1}
+                            </Typography>
+                          }
+                          secondary={step || "N/A"}
+                        />
+                      </ListItem>
+                    ))
+                  ) : (
+                    <ListItem className="pl-0">
                       <ListItemText
                         primary={
                           <Typography variant="body1" className="font-semibold">
-                            Step {index + 1}
+                            No procedure steps listed
                           </Typography>
                         }
-                        secondary={step}
                       />
                     </ListItem>
-                  ))}
+                  )}
                 </List>
               </Paper>
             </Grid>
           </Grid>
         </Paper>
       </div>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={errorMessage}
+      />
     </div>
   );
 };
