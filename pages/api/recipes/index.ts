@@ -1,32 +1,13 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { ObjectId } from "mongodb";
-import Cors from "cors";
-
-const cors = Cors({
-  methods: ["GET", "POST", "OPTIONS"],
-});
-
-function runMiddleware(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  fn: Function
-) {
-  return new Promise<void>((resolve, reject) => {
-    fn(req, res, (result: any) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-}
+import corsMiddleware from "../../../lib/cors-middleware";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  await runMiddleware(req, res, cors);
+  await corsMiddleware(req, res, () => {});
 
   const { db } = await connectToDatabase();
 
