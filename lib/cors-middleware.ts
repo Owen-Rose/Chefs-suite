@@ -3,6 +3,8 @@ import { NextApiRequest, NextApiResponse } from "next";
 
 const cors = Cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  origin: "*", // Be careful with this in production
+  optionsSuccessStatus: 200,
 });
 
 export function runMiddleware(
@@ -20,11 +22,17 @@ export function runMiddleware(
   });
 }
 
-export default async function corsMiddleware(
+const corsMiddleware = (
   req: NextApiRequest,
   res: NextApiResponse,
   next: () => void
-) {
-  await runMiddleware(req, res, cors);
-  next();
-}
+) => {
+  cors(req, res, (result: any) => {
+    if (result instanceof Error) {
+      return res.status(500).end(result.message);
+    }
+    next();
+  });
+};
+
+export default corsMiddleware;
