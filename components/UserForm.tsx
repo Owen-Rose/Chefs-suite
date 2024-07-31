@@ -9,13 +9,18 @@ import {
   CircularProgress,
   MenuItem,
   Box,
+  Chip,
+  Select,
+  InputLabel,
+  FormControl,
+  Tooltip,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { Person, Email, Lock } from "@mui/icons-material";
 
 const FormPaper = styled(Paper)(({ theme }) => ({
   padding: "2rem",
-  maxWidth: "500px",
+  maxWidth: "600px",
   width: "100%",
   backgroundColor: "#ffffff",
   borderRadius: "12px",
@@ -45,6 +50,8 @@ type UserFormProps = {
 };
 
 type FormData = {
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
   role: string;
@@ -57,6 +64,8 @@ type Message = {
 
 const UserForm: React.FC<UserFormProps> = ({ userId = null }) => {
   const [formData, setFormData] = useState<FormData>({
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     role: "User",
@@ -123,6 +132,24 @@ const UserForm: React.FC<UserFormProps> = ({ userId = null }) => {
         ) : (
           <form onSubmit={handleSubmit}>
             <TextField
+              label="First Name"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleChange}
+              required
+              fullWidth
+              margin="normal"
+            />
+            <TextField
+              label="Last Name"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              required
+              fullWidth
+              margin="normal"
+            />
+            <TextField
               label="Email"
               name="email"
               type="email"
@@ -144,23 +171,23 @@ const UserForm: React.FC<UserFormProps> = ({ userId = null }) => {
               margin="normal"
               InputProps={{ startAdornment: <Lock color="action" /> }}
             />
-            <TextField
-              select
-              label="Role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              required
-              fullWidth
-              margin="normal"
-              InputProps={{ startAdornment: <Person color="action" /> }}
-            >
-              {roles.map((role) => (
-                <MenuItem key={role} value={role}>
-                  {role}
-                </MenuItem>
-              ))}
-            </TextField>
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Role</InputLabel>
+              <Select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                required
+                fullWidth
+                startAdornment={<Person color="action" />}
+              >
+                {roles.map((role) => (
+                  <MenuItem key={role} value={role}>
+                    {role}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <Button
               type="submit"
               variant="contained"
