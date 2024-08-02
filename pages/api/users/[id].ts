@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { auth } from "../../../lib/firebaseAdmin";
 import { Db, MongoClient } from "mongodb";
+import { setUserRole } from "../../../lib/userManagement";
+import { UserRole } from "../../../types/Roles";
 
 type DbType = {
   db: Db;
@@ -47,7 +49,7 @@ const handleUpdateUser = async (
   db: Db,
   id: string
 ) => {
-  const { email, password, role, ...rest } = req.body;
+  const { email, password, role, FirstName, LastName } = req.body;
 
   try {
     // Update user in Firebase
@@ -57,11 +59,15 @@ const handleUpdateUser = async (
 
     const updatedFirebaseUser = await auth.updateUser(id, updateParams);
 
+    // Update custom claims (role)
+    await setUserRole(id, role as UserRole);
+
     // Prepare update for MongoDB (exclude password)
     const updateData = {
       email: updatedFirebaseUser.email,
+      FirstName,
+      LastName,
       role,
-      ...rest,
     };
 
     // Update user in MongoDB

@@ -1,7 +1,9 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
-import { auth } from "../../../lib/firebaseAdmin";
+import { auth, UserRecord } from "../../../lib/firebaseAdmin"; // Updated import
 import { Db, MongoClient } from "mongodb";
+import { setUserRole } from "../../../lib/userManagement";
+import { UserRole } from "../../../types/Roles";
 
 type DbType = {
   db: Db;
@@ -26,21 +28,25 @@ const handleCreateUser = async (
   res: NextApiResponse,
   db: Db
 ) => {
-  const { email, password, role, ...rest } = req.body;
+  const { email, password, role, FirstName, LastName } = req.body;
+  let userRecord: UserRecord | null = null;
 
   try {
     // Create user in Firebase
-    const userRecord = await auth.createUser({
+    userRecord = await auth.createUser({
       email,
       password,
     });
+
+    await setUserRole(userRecord.uid, role as UserRole);
 
     // Prepare user data for MongoDB (exclude password)
     const newUser = {
       uid: userRecord.uid,
       email,
+      FirstName,
+      LastName,
       role,
-      ...rest,
     };
 
     // Insert user into MongoDB
@@ -50,6 +56,11 @@ const handleCreateUser = async (
       .status(201)
       .json({ message: "User created successfully", user: newUser });
   } catch (error) {
+    // Delete the Firebase user if MongoDB insertion fails
+    if (error instanceof Error && userRecord) {
+      await auth.deleteUser(userRecord.uid);
+    }
+
     if (error instanceof Error) {
       res.status(400).json({ error: error.message });
     } else {

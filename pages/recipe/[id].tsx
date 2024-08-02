@@ -19,6 +19,7 @@ import { Edit, Delete, Print, ArrowBack } from "@mui/icons-material";
 import { connectToDatabase } from "../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import { ParsedUrlQuery } from "querystring";
+import ProtectedComponent from "../../components/ProtectedComponent";
 
 interface Ingredient {
   id: number;
@@ -89,24 +90,28 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
                   <ArrowBack />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Edit Recipe">
-                <IconButton
-                  onClick={() => router.push(`/edit/${recipe._id}`)}
-                  color="primary"
-                >
-                  <Edit />
-                </IconButton>
-              </Tooltip>
+              <ProtectedComponent requiredPermission="editRecipes">
+                <Tooltip title="Edit Recipe">
+                  <IconButton
+                    onClick={() => router.push(`/edit/${recipe._id}`)}
+                    color="primary"
+                  >
+                    <Edit />
+                  </IconButton>
+                </Tooltip>
+              </ProtectedComponent>
               <Tooltip title="Print Recipe">
                 <IconButton onClick={() => window.print()} color="primary">
                   <Print />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Delete Recipe">
-                <IconButton onClick={handleDelete} color="error">
-                  <Delete />
-                </IconButton>
-              </Tooltip>
+              <ProtectedComponent requiredPermission="deleteRecipes">
+                <Tooltip title="Delete Recipe">
+                  <IconButton onClick={handleDelete} color="error">
+                    <Delete />
+                  </IconButton>
+                </Tooltip>
+              </ProtectedComponent>
             </div>
           </div>
 

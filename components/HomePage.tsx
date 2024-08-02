@@ -29,6 +29,10 @@ import {
 } from "@mui/icons-material";
 import Link from "next/link";
 import { Recipe } from "@/types/Recipe";
+import { UserRole } from "../types/Roles";
+import ProtectedComponent from "./ProtectedComponent";
+import { useAuth } from "../context/AuthContext";
+import LogoutButton from "./LogoutButton";
 
 const HomePage: React.FC = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -36,8 +40,11 @@ const HomePage: React.FC = () => {
   const [station, setStation] = useState("");
   const [stations, setStations] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("name");
+  const { user } = useAuth();
 
   useEffect(() => {
+    console.log("Current user role:", user?.role);
+
     fetch("/api/recipes/")
       .then((res) => res.json())
       .then((data: Recipe[]) => {
@@ -48,7 +55,7 @@ const HomePage: React.FC = () => {
         setStations(uniqueStations);
       })
       .catch((error) => console.error("Error fetching recipes: ", error));
-  }, []);
+  }, [user?.role]);
 
   const filteredAndSortedRecipes = recipes
     .filter((recipe) =>
@@ -72,16 +79,19 @@ const HomePage: React.FC = () => {
           >
             Recipe Management System
           </Typography>
-          <Link href="/add">
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<Add />}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              Add New Recipe
-            </Button>
-          </Link>
+          <LogoutButton />
+          <ProtectedComponent requiredPermission="createRecipes">
+            <Link href="/add">
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Add />}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Add New Recipe
+              </Button>
+            </Link>
+          </ProtectedComponent>
         </div>
 
         <Paper elevation={3} className="p-6 mb-8">
@@ -172,12 +182,14 @@ const HomePage: React.FC = () => {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Edit Recipe">
-                        <IconButton
-                          component={Link}
-                          href={`/edit/${recipe._id}`}
-                        >
-                          <Edit />
-                        </IconButton>
+                        <ProtectedComponent requiredPermission="editRecipes">
+                          <IconButton
+                            component={Link}
+                            href={`/edit/${recipe._id}`}
+                          >
+                            <Edit />
+                          </IconButton>
+                        </ProtectedComponent>
                       </Tooltip>
                       <Tooltip title="Print Recipe">
                         <IconButton
