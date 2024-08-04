@@ -1,39 +1,59 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { getSession } from "next-auth/react";
 import { connectToDatabase } from "../../../lib/mongodb";
-import { auth } from "../../../lib/firebaseAdmin";
-import { Db, MongoClient } from "mongodb";
-import { setUserRole } from "../../../lib/userManagement";
-import { UserRole } from "../../../types/Roles";
+import { ObjectId } from "mongodb";
+import { hash } from "bcryptjs";
 
-type DbType = {
-  db: Db;
-  client: MongoClient;
-};
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const session = await getSession({ req });
+  if (!session || session.user.role !== "ADMIN") {
+    return res.status(403).json({ error: "Not authorized" });
+  }
 
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  const { db }: DbType = await connectToDatabase();
+  const { db } = await connectToDatabase();
   const { id } = req.query;
 
-  switch (req.method) {
-    case "GET":
-      return handleGetUser(req, res, db, id as string);
-    case "PUT":
-      return handleUpdateUser(req, res, db, id as string);
-    case "DELETE":
-      return handleDeleteUser(req, res, db, id as string);
-    default:
-      return res.status(405).end();
+  if (req.method === "GET") {
+    const user = await db
+      .collection("users")
+      .findOne(
+        { _id: new ObjectId(id as string) },
+        { projection: { password: 0 } }
+      );
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.status(200).json(user);
+  } else if (req.method === "PUT") {
+    const { name, email, password, role } = req.body;
+    const updateData: any = { name, email, role, updatedAt: new Date() };
+    if (password) {
+      updateData.password = await hash(password, 12);
+    }
+    await db
+      .collection("users")
+      .updateOne({ _id: new ObjectId(id as string) }, { $set: updateData });
+    res.status(200).json({ message: "User updated" });
+  } else if (req.method === "DELETE") {
+    await db.collection("users").deleteOne({ _id: new ObjectId(id as string) });
+    res.status(200).json({ message: "User deleted" });
+  } else {
+    res.setHeader("Allow", ["GET", "PUT", "DELETE"]);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-};
+}
 
 const handleGetUser = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  db: Db,
-  id: string
+  db: any,
+  userId: ObjectId
 ) => {
   try {
-    const user = await db.collection("users").findOne({ uid: id });
+    const user = await db
+      .collection("users")
+      .findOne({ _id: userId }, { projection: { password: 0 } });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -46,62 +66,41 @@ const handleGetUser = async (
 const handleUpdateUser = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  db: Db,
-  id: string
+  db: any,
+  userId: ObjectId
 ) => {
   const { email, password, role, FirstName, LastName } = req.body;
 
   try {
-    // Update user in Firebase
-    const updateParams: any = {};
-    if (email) updateParams.email = email;
-    if (password) updateParams.password = password;
+    const updateData: any = { email, role, FirstName, LastName };
+    if (password) {
+      updateData.password = await hash(password, 12);
+    }
 
-    const updatedFirebaseUser = await auth.updateUser(id, updateParams);
-
-    // Update custom claims (role)
-    await setUserRole(id, role as UserRole);
-
-    // Prepare update for MongoDB (exclude password)
-    const updateData = {
-      email: updatedFirebaseUser.email,
-      FirstName,
-      LastName,
-      role,
-    };
-
-    // Update user in MongoDB
-    const updateResult = await db
+    const result = await db
       .collection("users")
-      .updateOne({ uid: id }, { $set: updateData });
+      .updateOne({ _id: userId }, { $set: updateData });
 
-    if (updateResult.modifiedCount === 0) {
+    if (result.matchedCount === 0) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res
-      .status(200)
-      .json({ message: "User updated successfully", user: updateData });
+    res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
-    if (error instanceof Error) {
-      res.status(400).json({ error: error.message });
-    } else {
-      res.status(400).json({ error: "An unknown error occurred" });
-    }
+    res.status(500).json({ error: "Failed to update user" });
   }
 };
 
 const handleDeleteUser = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  db: Db,
-  id: string
+  db: any,
+  userId: ObjectId
 ) => {
   try {
-    await auth.deleteUser(id);
-    const deleteResult = await db.collection("users").deleteOne({ uid: id });
+    const result = await db.collection("users").deleteOne({ _id: userId });
 
-    if (deleteResult.deletedCount === 0) {
+    if (result.deletedCount === 0) {
       return res.status(404).json({ error: "User not found" });
     }
 
@@ -110,5 +109,3 @@ const handleDeleteUser = async (
     res.status(500).json({ error: "Failed to delete user" });
   }
 };
-
-export default handler;

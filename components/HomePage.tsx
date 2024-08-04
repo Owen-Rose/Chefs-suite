@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import {
   TextField,
   Button,
@@ -40,22 +41,24 @@ const HomePage: React.FC = () => {
   const [station, setStation] = useState("");
   const [stations, setStations] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("name");
-  const { user } = useAuth();
+  const { data: session } = useSession();
 
   useEffect(() => {
-    console.log("Current user role:", user?.role);
+    if (session) {
+      console.log("Current user role:", session.user.role);
 
-    fetch("/api/recipes/")
-      .then((res) => res.json())
-      .then((data: Recipe[]) => {
-        setRecipes(data);
-        const uniqueStations = Array.from(
-          new Set(data.map((recipe) => recipe.station))
-        );
-        setStations(uniqueStations);
-      })
-      .catch((error) => console.error("Error fetching recipes: ", error));
-  }, [user?.role]);
+      fetch("/api/recipes/")
+        .then((res) => res.json())
+        .then((data: Recipe[]) => {
+          setRecipes(data);
+          const uniqueStations = Array.from(
+            new Set(data.map((recipe) => recipe.station))
+          );
+          setStations(uniqueStations);
+        })
+        .catch((error) => console.error("Error fetching recipes: ", error));
+    }
+  }, [session]);
 
   const filteredAndSortedRecipes = recipes
     .filter((recipe) =>

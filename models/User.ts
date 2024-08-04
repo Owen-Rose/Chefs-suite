@@ -1,22 +1,18 @@
-// models/User.ts
-import mongoose, { Document, Schema } from "mongoose";
+import { ObjectId } from "mongodb";
 
-interface IUser extends Document {
+export interface User {
+  _id: ObjectId;
+  name: string;
   email: string;
   password: string;
+  role: "ADMIN" | "CHEF" | "MANAGER" | "STAFF";
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const UserSchema: Schema = new Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-});
-
-export default mongoose.models.User ||
-  mongoose.model<IUser>("User", UserSchema);
+export interface SafeUser {
+  id: string;
+  name: string;
+  email: string;
+  role: "ADMIN" | "CHEF" | "MANAGER" | "STAFF";
+}

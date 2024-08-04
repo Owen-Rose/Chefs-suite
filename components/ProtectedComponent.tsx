@@ -1,5 +1,5 @@
 import React from "react";
-import { useAuth } from "../context/AuthContext";
+import { useSession } from "next-auth/react";
 import { hasPermission } from "../lib/rbac";
 import { Permission } from "../types/Permission";
 import { UserRole } from "../types/Roles";
@@ -13,9 +13,12 @@ const ProtectedComponent: React.FC<ProtectedComponentProps> = ({
   requiredPermission,
   children,
 }) => {
-  const { user } = useAuth();
+  const { data: session } = useSession();
 
-  if (!user || !hasPermission(user.role as UserRole, requiredPermission)) {
+  if (
+    !session ||
+    !hasPermission(session.user.role as UserRole, requiredPermission)
+  ) {
     return null; // Or return an "Access Denied" component
   }
 

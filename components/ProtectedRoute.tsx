@@ -1,23 +1,23 @@
-// components/ProtectedRoute.tsx
-import { useRouter } from 'next/router';
-import { useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useRouter } from "next/router";
+import { useEffect } from "react";
+import { useSession } from "next-auth/react";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    const { user } = useAuth();
-    const router = useRouter();
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
-    useEffect(() => {
-        const devMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
+  useEffect(() => {
+    if (status === "loading") return; // Do nothing while loading
+    if (!session) {
+      router.push("/login");
+    }
+  }, [session, status, router]);
 
-        if (!devMode && !user) {
-            router.push('/login');
-        }
-    }, [user, router]);
+  if (status === "loading") {
+    return <div>Loading...</div>;
+  }
 
-    if (!user && process.env.NEXT_PUBLIC_DEV_MODE !== 'true') return <div>Loading...</div>;
-
-    return <>{children}</>;
+  return session ? <>{children}</> : null;
 };
 
 export default ProtectedRoute;

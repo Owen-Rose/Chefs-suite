@@ -10,12 +10,14 @@ const LoginPage = () => {
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       await login(email, password);
       router.push("/");
     } catch (error) {
       console.error("Failed to login", error);
+      // Here you might want to show an error message to the user
     }
   };
 
@@ -25,33 +27,35 @@ const LoginPage = () => {
         <Typography variant="h4" className="text-center mb-6">
           Login
         </Typography>
-        <TextField
-          label="Email"
-          variant="outlined"
-          fullWidth
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mb-4"
-        />
-        <TextField
-          label="Password"
-          type="password"
-          variant="outlined"
-          fullWidth
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mb-4"
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          fullWidth
-          onClick={handleLogin}
-          startIcon={<Login />}
-          className="mb-4"
-        >
-          Login
-        </Button>
+        <form onSubmit={handleLogin}>
+          <TextField
+            label="Email"
+            variant="outlined"
+            fullWidth
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mb-4"
+          />
+          <TextField
+            label="Password"
+            type="password"
+            variant="outlined"
+            fullWidth
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mb-4"
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            startIcon={<Login />}
+            className="mb-4"
+          >
+            Login
+          </Button>
+        </form>
       </div>
     </div>
   );

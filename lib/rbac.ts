@@ -1,38 +1,12 @@
-import { UserRole } from "../types/Roles";
-import { Permission } from "../types/Permission";
+import { NextApiHandler, NextApiRequest, NextApiResponse } from "next";
+import { getSession } from "next-auth/react";
 
-const rolePermissions: Record<UserRole, Permission[]> = {
-  [UserRole.ADMIN]: [
-    "viewRecipes",
-    "createRecipes",
-    "editRecipes",
-    "deleteRecipes",
-    "viewUsers",
-    "createUsers",
-    "editUsers",
-    "deleteUsers",
-  ],
-  [UserRole.CHEF]: [
-    "viewRecipes",
-    "createRecipes",
-    "editRecipes",
-    "deleteRecipes",
-    "viewUsers",
-    "createUsers",
-    "editUsers",
-    "deleteUsers",
-  ],
-  [UserRole.MANAGER]: [
-    "viewRecipes",
-    "createRecipes",
-    "editRecipes",
-    "viewUsers",
-    "createUsers",
-    "editUsers",
-  ],
-  [UserRole.STAFF]: ["viewRecipes"],
-};
-
-export function hasPermission(role: UserRole, permission: Permission): boolean {
-  return rolePermissions[role]?.includes(permission) || false;
+export function withAuth(handler: NextApiHandler, allowedRoles: string[]) {
+  return async (req: NextApiRequest, res: NextApiResponse) => {
+    const session = await getSession({ req });
+    if (!session || !allowedRoles.includes(session.user.role)) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    return handler(req, res);
+  };
 }

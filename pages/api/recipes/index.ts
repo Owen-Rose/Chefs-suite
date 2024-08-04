@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import corsMiddleware, { runMiddleware } from "../../../lib/cors-middleware";
+import { withAuth } from "../../../lib/rbac";
 
 export default async function handler(
   req: NextApiRequest,
@@ -39,3 +40,5 @@ export default async function handler(
       res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 }
+
+export default withAuth(handler, ["ADMIN", "CHEF", "MANAGER", "STAFF"]);

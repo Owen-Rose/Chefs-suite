@@ -1,75 +1,44 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
-import {
-  onAuthStateChanged,
-  User as FirebaseUser,
-  signInWithEmailAndPassword,
-  signOut,
-} from "firebase/auth";
-import { auth } from "../firebaseConfig";
-
-interface User extends FirebaseUser {
-  role?: string;
-}
+import React, { createContext, useContext, ReactNode } from "react";
+import { signIn, signOut, Session } from "next-auth/react";
+import { SafeUser } from "../models/User";
 
 interface AuthContextType {
-  user: User | null;
+  user: SafeUser | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+interface AuthProviderProps {
+  children: ReactNode;
+  session: Session | null;
+}
 
-  useEffect(() => {
-    const devMode = process.env.NEXT_PUBLIC_DEV_MODE === "true";
-
-    if (devMode) {
-      setUser({
-        uid: "dev-uid",
-        email: "dev@example.com",
-        displayName: "Developer",
-        role: "ADMIN",
-      } as User);
-    } else {
-      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
-          const idTokenResult = await firebaseUser.getIdTokenResult();
-          setUser({
-            ...firebaseUser,
-            role: idTokenResult.claims.role as string,
-          });
-        } else {
-          setUser(null);
-        }
-      });
-      return unsubscribe;
-    }
-  }, []);
+export const AuthProvider = ({ children, session }: AuthProviderProps) => {
+  const user: SafeUser | null = session?.user
+    ? {
+        id: session.user.id as string,
+        email: session.user.email as string,
+        name: session.user.name as string,
+        role: session.user.role as string,
+      }
+    : null;
 
   const login = async (email: string, password: string) => {
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
+    const result = await signIn("credentials", {
+      redirect: false,
       email,
-      password
-    );
-    const idTokenResult = await userCredential.user.getIdTokenResult();
-    setUser({
-      ...userCredential.user,
-      role: idTokenResult.claims.role as string,
+      password,
     });
+
+    if (result?.error) {
+      throw new Error(result.error);
+    }
   };
 
   const logout = async () => {
-    await signOut(auth);
-    setUser(null);
+    await signOut();
   };
 
   return (
@@ -79,12 +48,10 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const useAuth = () => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
-
-export { AuthProvider, useAuth };

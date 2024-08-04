@@ -1,85 +1,95 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { getSession } from "next-auth/react";
 import { connectToDatabase } from "../../../lib/mongodb";
-import { auth, UserRecord } from "../../../lib/firebaseAdmin"; // Updated import
-import { Db, MongoClient } from "mongodb";
-import { setUserRole } from "../../../lib/userManagement";
-import { UserRole } from "../../../types/Roles";
+import { hash } from "bcryptjs";
 
-type DbType = {
-  db: Db;
-  client: MongoClient;
-};
-
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  const { db }: DbType = await connectToDatabase();
-
-  switch (req.method) {
-    case "POST":
-      return handleCreateUser(req, res, db);
-    case "GET":
-      return handleGetUsers(req, res, db);
-    default:
-      return res.status(405).end();
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const session = await getSession({ req });
+  if (!session || session.user.role !== "ADMIN") {
+    return res.status(403).json({ error: "Not authorized" });
   }
-};
+
+  const { db } = await connectToDatabase();
+
+  if (req.method === "POST") {
+    // Create user
+    const { name, email, password, role } = req.body;
+    const hashedPassword = await hash(password, 12);
+    const result = await db.collection("users").insertOne({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    res
+      .status(201)
+      .json({ message: "User created", userId: result.insertedId });
+  } else if (req.method === "GET") {
+    // Get all users
+    const users = await db
+      .collection("users")
+      .find({}, { projection: { password: 0 } })
+      .toArray();
+    res.status(200).json(users);
+  } else {
+    res.setHeader("Allow", ["POST", "GET"]);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+}
 
 const handleCreateUser = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  db: Db
+  db: any
 ) => {
   const { email, password, role, FirstName, LastName } = req.body;
-  let userRecord: UserRecord | null = null;
 
   try {
-    // Create user in Firebase
-    userRecord = await auth.createUser({
-      email,
-      password,
-    });
+    const existingUser = await db.collection("users").findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists" });
+    }
 
-    await setUserRole(userRecord.uid, role as UserRole);
+    const hashedPassword = await hash(password, 12);
 
-    // Prepare user data for MongoDB (exclude password)
     const newUser = {
-      uid: userRecord.uid,
       email,
+      password: hashedPassword,
       FirstName,
       LastName,
       role,
     };
 
-    // Insert user into MongoDB
-    await db.collection("users").insertOne(newUser);
+    const result = await db.collection("users").insertOne(newUser);
 
-    res
-      .status(201)
-      .json({ message: "User created successfully", user: newUser });
+    res.status(201).json({
+      message: "User created successfully",
+      user: { ...newUser, _id: result.insertedId },
+    });
   } catch (error) {
-    // Delete the Firebase user if MongoDB insertion fails
-    if (error instanceof Error && userRecord) {
-      await auth.deleteUser(userRecord.uid);
-    }
-
-    if (error instanceof Error) {
-      res.status(400).json({ error: error.message });
-    } else {
-      res.status(400).json({ error: "An unknown error occurred" });
-    }
+    res
+      .status(500)
+      .json({ error: "An error occurred while creating the user" });
   }
 };
 
 const handleGetUsers = async (
   req: NextApiRequest,
   res: NextApiResponse,
-  db: Db
+  db: any
 ) => {
   try {
-    const users = await db.collection("users").find().toArray();
+    const users = await db
+      .collection("users")
+      .find({}, { projection: { password: 0 } })
+      .toArray();
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch users" });
   }
 };
-
-export default handler;
