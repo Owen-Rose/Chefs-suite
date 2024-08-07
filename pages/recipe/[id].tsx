@@ -20,6 +20,7 @@ import { connectToDatabase } from "../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import { ParsedUrlQuery } from "querystring";
 import ProtectedComponent from "../../components/ProtectedComponent";
+import { Permission } from "@/types/Permission";
 
 interface Ingredient {
   id: number;
@@ -90,7 +91,7 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
                   <ArrowBack />
                 </IconButton>
               </Tooltip>
-              <ProtectedComponent requiredPermission="editRecipes">
+              <ProtectedComponent requiredPermission={Permission.EDIT_RECIPES}>
                 <Tooltip title="Edit Recipe">
                   <IconButton
                     onClick={() => router.push(`/edit/${recipe._id}`)}
@@ -100,12 +101,14 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
                   </IconButton>
                 </Tooltip>
               </ProtectedComponent>
-              <Tooltip title="Print Recipe">
-                <IconButton onClick={() => window.print()} color="primary">
-                  <Print />
-                </IconButton>
-              </Tooltip>
-              <ProtectedComponent requiredPermission="deleteRecipes">
+              <ProtectedComponent requiredPermission={Permission.PRINT_RECIPES}>
+                <Tooltip title="Print Recipe">
+                  <IconButton onClick={() => window.print()} color="primary">
+                    <Print />
+                  </IconButton>
+                </Tooltip>
+              </ProtectedComponent>
+              <ProtectedComponent requiredPermission={Permission.DELETE_RECIPES}>
                 <Tooltip title="Delete Recipe">
                   <IconButton onClick={handleDelete} color="error">
                     <Delete />
@@ -233,9 +236,8 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
                           {ingredient.productName || "Unnamed Ingredient"}
                         </Typography>
                         <Typography variant="body2">
-                          {`${ingredient.quantity || 0} ${
-                            ingredient.unit || ""
-                          }`}
+                          {`${ingredient.quantity || 0} ${ingredient.unit || ""
+                            }`}
                         </Typography>
                       </Paper>
                     ))

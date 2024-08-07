@@ -2,12 +2,10 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import corsMiddleware, { runMiddleware } from "../../../lib/cors-middleware";
-import { withAuth } from "../../../lib/rbac";
+import { withApiAuth } from "../../../lib/auth-middleware";
+import { Permission } from "../../../types/Permission";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   await runMiddleware(req, res, corsMiddleware);
 
   const { db } = await connectToDatabase();
@@ -24,7 +22,7 @@ export default async function handler(
     case "POST":
       try {
         const newRecipe = req.body;
-        newRecipe._id = new ObjectId(newRecipe._id); // Ensure _id is an ObjectId
+        newRecipe._id = new ObjectId(newRecipe._id);
 
         const result = await db.collection("recipes").insertOne(newRecipe);
         const insertedRecipe = await db
@@ -41,4 +39,4 @@ export default async function handler(
   }
 }
 
-export default withAuth(handler, ["ADMIN", "CHEF", "MANAGER", "STAFF"]);
+export default withApiAuth(handler, Permission.VIEW_RECIPES);

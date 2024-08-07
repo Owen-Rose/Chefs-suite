@@ -1,55 +1,46 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getSession } from "next-auth/react";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { hash } from "bcryptjs";
+import { withApiAuth } from "../../../lib/auth-middleware";
+import { Permission } from "../../../types/Permission";
+import { UserRole } from "../../../types/Roles";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  const session = await getSession({ req });
-  if (!session || session.user.role !== "ADMIN") {
-    return res.status(403).json({ error: "Not authorized" });
-  }
-
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { db } = await connectToDatabase();
 
-  if (req.method === "POST") {
-    // Create user
-    const { name, email, password, role } = req.body;
-    const hashedPassword = await hash(password, 12);
-    const result = await db.collection("users").insertOne({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    res
-      .status(201)
-      .json({ message: "User created", userId: result.insertedId });
-  } else if (req.method === "GET") {
-    // Get all users
+  switch (req.method) {
+    case "GET":
+      return withApiAuth(getUsers, Permission.VIEW_USERS)(req, res);
+    case "POST":
+      return withApiAuth(createUser, Permission.CREATE_USERS)(req, res);
+    default:
+      res.setHeader("Allow", ["GET", "POST"]);
+      res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+}
+
+async function getUsers(req: NextApiRequest, res: NextApiResponse) {
+  const { db } = await connectToDatabase();
+  try {
     const users = await db
       .collection("users")
       .find({}, { projection: { password: 0 } })
       .toArray();
     res.status(200).json(users);
-  } else {
-    res.setHeader("Allow", ["POST", "GET"]);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch users" });
   }
 }
 
-const handleCreateUser = async (
-  req: NextApiRequest,
-  res: NextApiResponse,
-  db: any
-) => {
-  const { email, password, role, FirstName, LastName } = req.body;
-
+async function createUser(req: NextApiRequest, res: NextApiResponse) {
+  const { db } = await connectToDatabase();
   try {
+    const { email, password, FirstName, LastName, role } = req.body;
+
+    if (!email || !password || !FirstName || !LastName || !role) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
     const existingUser = await db.collection("users").findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: "User already exists" });
@@ -62,34 +53,20 @@ const handleCreateUser = async (
       password: hashedPassword,
       FirstName,
       LastName,
-      role,
+      role: role as UserRole,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     const result = await db.collection("users").insertOne(newUser);
 
     res.status(201).json({
       message: "User created successfully",
-      user: { ...newUser, _id: result.insertedId },
+      user: { ...newUser, _id: result.insertedId, password: undefined },
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "An error occurred while creating the user" });
+    res.status(500).json({ error: "Failed to create user" });
   }
-};
+}
 
-const handleGetUsers = async (
-  req: NextApiRequest,
-  res: NextApiResponse,
-  db: any
-) => {
-  try {
-    const users = await db
-      .collection("users")
-      .find({}, { projection: { password: 0 } })
-      .toArray();
-    res.status(200).json(users);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch users" });
-  }
-};
+export default handler;

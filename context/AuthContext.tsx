@@ -18,11 +18,11 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children, session }: AuthProviderProps) => {
   const user: SafeUser | null = session?.user
     ? {
-        id: session.user.id as string,
-        email: session.user.email as string,
-        name: session.user.name as string,
-        role: session.user.role as string,
-      }
+      id: session.user.id as string,
+      email: session.user.email as string,
+      name: session.user.name as string,
+      role: session.user.role as string,
+    }
     : null;
 
   const login = async (email: string, password: string) => {

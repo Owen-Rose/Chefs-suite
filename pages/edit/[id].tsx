@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { GetServerSideProps } from 'next';
 import { useRouter } from "next/router";
 import {
   TextField,
@@ -23,55 +24,32 @@ import {
   Save,
 } from "@mui/icons-material";
 import { Recipe } from "../../types/Recipe";
+import { getSession } from "next-auth/react";
+import { Permission, hasPermission } from "../../types/Permission";
+import { UserRole } from "../../types/Roles";
 
-const EditRecipePage: React.FC = () => {
+interface EditRecipePageProps {
+  recipe: Recipe;
+  error?: string;
+}
+
+const EditRecipePage: React.FC<EditRecipePageProps> = ({ recipe: initialRecipe, error }) => {
   const router = useRouter();
-  const { id } = router.query;
-  const [recipe, setRecipe] = useState<Recipe>({
-    name: "",
-    createdDate: "",
-    version: "",
-    station: "",
-    batchNumber: 0,
-    equipment: [],
-    ingredients: [],
-    procedure: [],
-    yield: "",
-    portionSize: "",
-    portionsPerRecipe: "",
-  });
+  const [recipe, setRecipe] = useState<Recipe>(initialRecipe);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
-  useEffect(() => {
-    if (id) {
-      fetch(`/api/recipes/${id}`)
-        .then((res) => res.json())
-        .then((data: Recipe) => {
-          // Ensure all properties have default values if they're null or undefined
-          setRecipe({
-            name: data.name || "",
-            createdDate: data.createdDate || "",
-            version: data.version || "",
-            station: data.station || "",
-            batchNumber: data.batchNumber || 0,
-            equipment: Array.isArray(data.equipment) ? data.equipment : [],
-            ingredients: Array.isArray(data.ingredients)
-              ? data.ingredients
-              : [],
-            procedure: Array.isArray(data.procedure) ? data.procedure : [],
-            yield: data.yield || "",
-            portionSize: data.portionSize || "",
-            portionsPerRecipe: data.portionsPerRecipe || "",
-          });
-        })
-        .catch((error) => {
-          console.error("Error fetching recipe:", error);
-          setErrorMessage("Failed to fetch recipe. Please try again.");
-          setSnackbarOpen(true);
-        });
-    }
-  }, [id]);
+  if (error) {
+    return (
+      <Box className="p-8 bg-gray-100 min-h-screen">
+        <Paper elevation={3} className="p-6 mb-6">
+          <Typography variant="h4" component="div" className="font-bold mb-4 text-red-600">
+            {error}
+          </Typography>
+        </Paper>
+      </Box>
+    );
+  }
 
   const handleChange = (field: keyof Recipe, value: any) => {
     setRecipe((prev) => ({ ...prev, [field]: value }));
@@ -110,25 +88,23 @@ const EditRecipePage: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      const response = await fetch(`/api/recipes/${id}`, {
+      const response = await fetch(`/api/recipes/${recipe._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(recipe),
       });
 
       if (response.ok) {
+        setSnackbarMessage("Recipe saved successfully");
         setSnackbarOpen(true);
-        setErrorMessage("Recipe saved successfully");
         router.push("/");
       } else {
-        const error = await response.text();
-        console.error("Failed to update recipe:", error);
-        setErrorMessage("Failed to save recipe. Please try again.");
-        setSnackbarOpen(true);
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save recipe");
       }
     } catch (error) {
       console.error("Error updating recipe:", error);
-      setErrorMessage("An error occurred while saving. Please try again.");
+      setSnackbarMessage(error.message || "An error occurred while saving. Please try again.");
       setSnackbarOpen(true);
     }
   };
@@ -247,9 +223,7 @@ const EditRecipePage: React.FC = () => {
                         fullWidth
                         value={ingredient.productName || ""}
                         onChange={(e) => {
-                          const newIngredients = [
-                            ...(recipe.ingredients || []),
-                          ];
+                          const newIngredients = [...(recipe.ingredients || [])];
                           newIngredients[index] = {
                             ...newIngredients[index],
                             productName: e.target.value,
@@ -266,9 +240,7 @@ const EditRecipePage: React.FC = () => {
                         type="number"
                         value={ingredient.quantity || 0}
                         onChange={(e) => {
-                          const newIngredients = [
-                            ...(recipe.ingredients || []),
-                          ];
+                          const newIngredients = [...(recipe.ingredients || [])];
                           newIngredients[index] = {
                             ...newIngredients[index],
                             quantity: Number(e.target.value) || 0,
@@ -284,9 +256,7 @@ const EditRecipePage: React.FC = () => {
                         fullWidth
                         value={ingredient.unit || ""}
                         onChange={(e) => {
-                          const newIngredients = [
-                            ...(recipe.ingredients || []),
-                          ];
+                          const newIngredients = [...(recipe.ingredients || [])];
                           newIngredients[index] = {
                             ...newIngredients[index],
                             unit: e.target.value,
@@ -295,12 +265,7 @@ const EditRecipePage: React.FC = () => {
                         }}
                       />
                     </Grid>
-                    <Grid
-                      item
-                      xs={12}
-                      md={1}
-                      className="flex items-center justify-end"
-                    >
+                    <Grid item xs={12} md={1} className="flex items-center justify-end">
                       <IconButton
                         color="secondary"
                         onClick={() => handleRemoveIngredient(index)}
@@ -420,10 +385,54 @@ const EditRecipePage: React.FC = () => {
         open={snackbarOpen}
         autoHideDuration={6000}
         onClose={() => setSnackbarOpen(false)}
-        message={errorMessage}
+        message={snackbarMessage}
       />
     </Box>
   );
+};
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await getSession(context);
+  const { id } = context.params as { id: string };
+
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      },
+    };
+  }
+
+  const userRole = session.user?.role as UserRole;
+  if (!hasPermission(userRole, Permission.EDIT_RECIPES)) {
+    return {
+      props: {
+        error: "You don't have permission to edit recipes",
+      },
+    };
+  }
+
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/recipes/${id}`);
+    if (!res.ok) {
+      throw new Error('Failed to fetch recipe');
+    }
+    const recipe = await res.json();
+
+    return {
+      props: {
+        recipe,
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching recipe:', error);
+    return {
+      props: {
+        error: 'Failed to load recipe. Please try again.',
+      },
+    };
+  }
 };
 
 export default EditRecipePage;

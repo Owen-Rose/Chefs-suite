@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 import {
   TextField,
   Button,
@@ -18,6 +17,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  Menu,
 } from "@mui/material";
 import {
   Search,
@@ -27,13 +27,15 @@ import {
   Description,
   Print,
   Edit,
+  PeopleAlt,
+  AccountCircle,
 } from "@mui/icons-material";
 import Link from "next/link";
 import { Recipe } from "@/types/Recipe";
-import { UserRole } from "../types/Roles";
 import ProtectedComponent from "./ProtectedComponent";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import LogoutButton from "./LogoutButton";
+import { Permission } from "../types/Permission";
 
 const HomePage: React.FC = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -41,12 +43,10 @@ const HomePage: React.FC = () => {
   const [station, setStation] = useState("");
   const [stations, setStations] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("name");
-  const { data: session } = useSession();
+  const { user, hasPermission } = useAuth();
 
   useEffect(() => {
-    if (session) {
-      console.log("Current user role:", session.user.role);
-
+    if (user) {
       fetch("/api/recipes/")
         .then((res) => res.json())
         .then((data: Recipe[]) => {
@@ -58,7 +58,7 @@ const HomePage: React.FC = () => {
         })
         .catch((error) => console.error("Error fetching recipes: ", error));
     }
-  }, [session]);
+  }, [user]);
 
   const filteredAndSortedRecipes = recipes
     .filter((recipe) =>
@@ -71,6 +71,15 @@ const HomePage: React.FC = () => {
       return 0;
     });
 
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="container mx-auto px-4 py-8">
@@ -82,19 +91,56 @@ const HomePage: React.FC = () => {
           >
             Recipe Management System
           </Typography>
-          <LogoutButton />
-          <ProtectedComponent requiredPermission="createRecipes">
-            <Link href="/add">
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Add />}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                Add New Recipe
-              </Button>
-            </Link>
-          </ProtectedComponent>
+          <div className="flex space-x-4 items-center">
+            <ProtectedComponent requiredPermission={Permission.VIEW_USERS}>
+              <Link href="/users">
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<PeopleAlt />}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Manage Users
+                </Button>
+              </Link>
+            </ProtectedComponent>
+            <ProtectedComponent requiredPermission={Permission.CREATE_RECIPES}>
+              <Link href="/add">
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Add />}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Add New Recipe
+                </Button>
+              </Link>
+            </ProtectedComponent>
+            <IconButton
+              onClick={handleClick}
+              size="small"
+              sx={{ ml: 2 }}
+              aria-controls={open ? 'account-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={open ? 'true' : undefined}
+            >
+              <AccountCircle />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              id="account-menu"
+              open={open}
+              onClose={handleClose}
+              onClick={handleClose}
+            >
+              <MenuItem component={Link} href="/profile">
+                Profile
+              </MenuItem>
+              <MenuItem>
+                <LogoutButton />
+              </MenuItem>
+            </Menu>
+          </div>
         </div>
 
         <Paper elevation={3} className="p-6 mb-8">
@@ -184,25 +230,27 @@ const HomePage: React.FC = () => {
                           <Description />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Edit Recipe">
-                        <ProtectedComponent requiredPermission="editRecipes">
+                      <ProtectedComponent requiredPermission={Permission.EDIT_RECIPES}>
+                        <Tooltip title="Edit Recipe">
                           <IconButton
                             component={Link}
                             href={`/edit/${recipe._id}`}
                           >
                             <Edit />
                           </IconButton>
-                        </ProtectedComponent>
-                      </Tooltip>
-                      <Tooltip title="Print Recipe">
-                        <IconButton
-                          onClick={() => {
-                            /* Implement print functionality */
-                          }}
-                        >
-                          <Print />
-                        </IconButton>
-                      </Tooltip>
+                        </Tooltip>
+                      </ProtectedComponent>
+                      <ProtectedComponent requiredPermission={Permission.PRINT_RECIPES}>
+                        <Tooltip title="Print Recipe">
+                          <IconButton
+                            onClick={() => {
+                              /* Implement print functionality */
+                            }}
+                          >
+                            <Print />
+                          </IconButton>
+                        </Tooltip>
+                      </ProtectedComponent>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { hash } from "bcryptjs";
+import { UserRole } from "../../../types/Roles";
 
 export default async function handler(
   req: NextApiRequest,
@@ -31,15 +32,15 @@ export default async function handler(
       password: hashedPassword,
       FirstName,
       LastName,
-      role,
+      role: role as UserRole,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
-    res
-      .status(201)
-      .json({
-        message: "User created successfully",
-        userId: result.insertedId,
-      });
+    res.status(201).json({
+      message: "User created successfully",
+      userId: result.insertedId,
+    });
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).json({ message: "Internal server error" });

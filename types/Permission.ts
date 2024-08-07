@@ -1,9 +1,44 @@
-export type Permission =
-  | "viewRecipes"
-  | "createRecipes"
-  | "editRecipes"
-  | "deleteRecipes"
-  | "viewUsers"
-  | "createUsers"
-  | "editUsers"
-  | "deleteUsers";
+import { UserRole } from "./Roles";
+
+export enum Permission {
+  VIEW_RECIPES = "VIEW_RECIPES",
+  CREATE_RECIPES = "CREATE_RECIPES",
+  EDIT_RECIPES = "EDIT_RECIPES",
+  DELETE_RECIPES = "DELETE_RECIPES",
+  PRINT_RECIPES = "PRINT RECIPES",
+  VIEW_USERS = "VIEW_USERS",
+  CREATE_USERS = "CREATE_USERS",
+  EDIT_USERS = "EDIT_USERS",
+  DELETE_USERS = "DELETE_USERS",
+  MANAGE_ROLES = "MANAGE_ROLES",
+}
+
+export const RolePermissions: Record<UserRole, Permission[]> = {
+  [UserRole.ADMIN]: Object.values(Permission),
+  [UserRole.CHEF]: [
+    Permission.VIEW_RECIPES,
+    Permission.CREATE_RECIPES,
+    Permission.EDIT_RECIPES,
+    Permission.DELETE_RECIPES,
+    Permission.PRINT_RECIPES,
+    Permission.VIEW_USERS,
+    Permission.CREATE_USERS,
+    Permission.EDIT_USERS,
+    Permission.DELETE_USERS,
+    Permission.MANAGE_ROLES,
+  ],
+  [UserRole.MANAGER]: [
+    Permission.VIEW_RECIPES,
+    Permission.VIEW_USERS,
+    Permission.EDIT_RECIPES,
+    Permission.CREATE_RECIPES,
+    Permission.PRINT_RECIPES,
+    Permission.CREATE_USERS,
+    Permission.EDIT_USERS
+  ],
+  [UserRole.STAFF]: [Permission.VIEW_RECIPES],
+};
+
+export function hasPermission(role: UserRole, permission: Permission): boolean {
+  return RolePermissions[role].includes(permission);
+}

@@ -1,9 +1,10 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { compare } from "bcryptjs";
+import { UserRole } from "../../../types/Roles";
 
-export default NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -43,9 +44,6 @@ export default NextAuth({
       },
     }),
   ],
-  session: {
-    strategy: "jwt",
-  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -55,14 +53,23 @@ export default NextAuth({
     },
     async session({ session, token }) {
       if (session?.user) {
-        session.user.role = token.role as string;
-        session.user.id = token.sub as string;
+        session.user.role = token.role as UserRole;
+        session.user.id = token.sub;
       }
       return session;
     },
   },
   pages: {
-    signIn: "/login",
+    signIn: '/login',
+    error: '/auth/error',
+    newUser: '/auth/new-user',
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 60, // 30 minutes
+    updateAge: 5 * 60, // 5 minutes
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+export default NextAuth(authOptions); 

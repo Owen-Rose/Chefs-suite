@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   Container,
   Typography,
@@ -21,35 +22,63 @@ import {
   FormControl,
   InputLabel,
   SelectChangeEvent,
+  Snackbar,
+  CircularProgress,
+  Chip,
+  Tooltip,
 } from "@mui/material";
-import { Add, Edit, Delete } from "@mui/icons-material";
+import { Add, Edit, Delete, Search } from "@mui/icons-material";
 import { User } from "../types/User";
 import { UserRole } from "../types/Roles";
+import { useAuth } from "../hooks/useAuth";
+import { Permission } from "../types/Permission";
 
 const UserList: React.FC = () => {
+  const { data: session, status } = useSession();
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState<Omit<User, "uid">>({
+  const [formData, setFormData] = useState<Omit<User, "_id">>({
     FirstName: "",
     LastName: "",
     email: "",
     password: "",
     role: UserRole.STAFF,
   });
+  const [snackbar, setSnackbar] = useState({ open: false, message: "" });
+  const [searchTerm, setSearchTerm] = useState("");
+  const { hasPermission } = useAuth();
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (session) {
+      fetchUsers();
+    }
+  }, [session]);
+
+  useEffect(() => {
+    setFilteredUsers(
+      users.filter(
+        (user) =>
+          user.FirstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.LastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [users, searchTerm]);
 
   const fetchUsers = async () => {
     try {
       const response = await fetch("/api/users");
+      if (!response.ok) throw new Error("Failed to fetch users");
       const data = await response.json();
       setUsers(data);
     } catch (error) {
       console.error("Error fetching users:", error);
+      setSnackbar({ open: true, message: "Failed to fetch users" });
     }
+    console.log("Session status:", status);
+    console.log("User role:", session?.user?.role);
   };
 
   const handleOpenModal = (user?: User) => {
@@ -92,9 +121,7 @@ const UserList: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const url = selectedUser
-        ? `/api/users/${selectedUser.uid}`
-        : "/api/users";
+      const url = selectedUser ? `/api/users/${selectedUser._id}` : "/api/users";
       const method = selectedUser ? "PUT" : "POST";
       const response = await fetch(url, {
         method,
@@ -104,138 +131,200 @@ const UserList: React.FC = () => {
       if (!response.ok) throw new Error("Failed to save user");
       fetchUsers();
       handleCloseModal();
+      setSnackbar({ open: true, message: `User ${selectedUser ? "updated" : "created"} successfully` });
     } catch (error) {
       console.error("Error saving user:", error);
+      setSnackbar({ open: true, message: "Failed to save user" });
     }
   };
 
   const handleDelete = async (userId: string) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
-        await fetch(`/api/users/${userId}`, { method: "DELETE" });
+        const response = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+        if (!response.ok) throw new Error("Failed to delete user");
         fetchUsers();
+        setSnackbar({ open: true, message: "User deleted successfully" });
       } catch (error) {
         console.error("Error deleting user:", error);
+        setSnackbar({ open: true, message: "Failed to delete user" });
       }
     }
   };
 
+  if (status === "loading") {
+    return <CircularProgress />;
+  }
+
+  if (!session) {
+    return <Typography>Please log in to access this page.</Typography>;
+  }
+
+  if (!hasPermission(Permission.VIEW_USERS)) {
+    return <Typography>You don't have permission to view this page.</Typography>;
+  }
+
+
   return (
-    <Container maxWidth="lg">
-      <Typography variant="h4" component="h1" gutterBottom>
-        User Management
-      </Typography>
-      <Button
-        variant="contained"
-        color="primary"
-        startIcon={<Add />}
-        onClick={() => handleOpenModal()}
-        style={{ marginBottom: "1rem" }}
-      >
-        Add User
-      </Button>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>First Name</TableCell>
-              <TableCell>Last Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.uid}>
-                <TableCell>{user.FirstName}</TableCell>
-                <TableCell>{user.LastName}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.role}</TableCell>
-                <TableCell>
-                  <IconButton onClick={() => handleOpenModal(user)}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(user.uid)}>
-                    <Delete />
-                  </IconButton>
-                </TableCell>
+    <div className="min-h-screen bg-gray-100">
+      <Container maxWidth="lg" className="py-8">
+        <div className="flex justify-between items-center mb-8">
+          <Typography
+            variant="h4"
+            component="h1"
+            className="font-bold text-gray-800"
+          >
+            User Management
+          </Typography>
+          {hasPermission(Permission.CREATE_USERS) && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Add />}
+              onClick={() => handleOpenModal()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Add User
+            </Button>
+          )}
+        </div>
+
+        <Paper elevation={3} className="p-6 mb-8">
+          <TextField
+            label="Search Users"
+            variant="outlined"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            fullWidth
+            InputProps={{
+              startAdornment: <Search className="text-gray-400 mr-2" />,
+            }}
+          />
+        </Paper>
+
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow className="bg-gray-200">
+                <TableCell><strong>Name</strong></TableCell>
+                <TableCell><strong>Email</strong></TableCell>
+                <TableCell><strong>Role</strong></TableCell>
+                <TableCell><strong>Actions</strong></TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <Dialog open={isModalOpen} onClose={handleCloseModal}>
-        <DialogTitle>{selectedUser ? "Edit User" : "Add User"}</DialogTitle>
-        <form onSubmit={handleSubmit}>
-          <DialogContent>
-            <TextField
-              name="FirstName"
-              label="First Name"
-              value={formData.FirstName}
-              onChange={handleInputChange}
-              fullWidth
-              margin="normal"
-              required
-            />
-            <TextField
-              name="LastName"
-              label="Last Name"
-              value={formData.LastName}
-              onChange={handleInputChange}
-              fullWidth
-              margin="normal"
-              required
-            />
-            <TextField
-              name="email"
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              fullWidth
-              margin="normal"
-              required
-            />
-            {!selectedUser && (
+            </TableHead>
+            <TableBody>
+              {filteredUsers.map((user) => (
+                <TableRow key={user._id} className="hover:bg-gray-50">
+                  <TableCell>{`${user.FirstName} ${user.LastName}`}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={user.role}
+                      size="small"
+                      className="bg-blue-100 text-blue-800"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      {hasPermission(Permission.EDIT_USERS) && (
+                        <Tooltip title="Edit User">
+                          <IconButton onClick={() => handleOpenModal(user)}>
+                            <Edit />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {hasPermission(Permission.DELETE_USERS) && (
+                        <Tooltip title="Delete User">
+                          <IconButton onClick={() => handleDelete(user._id)}>
+                            <Delete />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Dialog open={isModalOpen} onClose={handleCloseModal}>
+          <DialogTitle>{selectedUser ? "Edit User" : "Add User"}</DialogTitle>
+          <form onSubmit={handleSubmit}>
+            <DialogContent>
               <TextField
-                name="password"
-                label="Password"
-                type="password"
-                value={formData.password}
+                name="FirstName"
+                label="First Name"
+                value={formData.FirstName}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
                 required
               />
-            )}
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="role-label">Role</InputLabel>
-              <Select
-                labelId="role-label"
-                name="role"
-                value={formData.role}
+              <TextField
+                name="LastName"
+                label="Last Name"
+                value={formData.LastName}
                 onChange={handleInputChange}
                 fullWidth
+                margin="normal"
                 required
-              >
-                {Object.values(UserRole).map((role) => (
-                  <MenuItem key={role} value={role}>
-                    {role}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseModal}>Cancel</Button>
-            <Button type="submit" color="primary">
-              {selectedUser ? "Update" : "Add"}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-    </Container>
+              />
+              <TextField
+                name="email"
+                label="Email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                required
+              />
+              {!selectedUser && (
+                <TextField
+                  name="password"
+                  label="Password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  fullWidth
+                  margin="normal"
+                  required
+                />
+              )}
+              <FormControl fullWidth margin="normal">
+                <InputLabel id="role-label">Role</InputLabel>
+                <Select
+                  labelId="role-label"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  fullWidth
+                  required
+                >
+                  {Object.values(UserRole).map((role) => (
+                    <MenuItem key={role} value={role}>
+                      {role}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseModal}>Cancel</Button>
+              <Button type="submit" color="primary">
+                {selectedUser ? "Update" : "Add"}
+              </Button>
+            </DialogActions>
+          </form>
+        </Dialog>
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          message={snackbar.message}
+        />
+      </Container>
+    </div>
   );
 };
 

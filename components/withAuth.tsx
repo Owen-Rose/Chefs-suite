@@ -1,22 +1,22 @@
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
-import { ComponentType } from "react";
+import { useRouter } from 'next/router';
+import { useAuth } from '../hooks/useAuth';
+import { Permission } from '../types/Permission';
 
-export function withAuth<P>(
-  WrappedComponent: ComponentType<P>,
-  allowedRoles: string[]
-) {
-  return (props: P) => {
-    const { data: session, status } = useSession();
+export function withAuth(WrappedComponent: React.ComponentType, requiredPermission: Permission) {
+  return function AuthenticatedComponent(props: any) {
+    const { user, hasPermission } = useAuth();
     const router = useRouter();
 
-    if (status === "loading") {
-      return <p>Loading...</p>;
-    }
+    if (typeof window !== 'undefined') {
+      if (!user) {
+        router.replace('/login');
+        return null;
+      }
 
-    if (!session || !allowedRoles.includes(session.user.role)) {
-      router.push("/login");
-      return null;
+      if (!hasPermission(requiredPermission)) {
+        router.replace('/unauthorized');
+        return null;
+      }
     }
 
     return <WrappedComponent {...props} />;
