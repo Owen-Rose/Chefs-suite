@@ -5,7 +5,7 @@ export enum Permission {
   CREATE_RECIPES = "CREATE_RECIPES",
   EDIT_RECIPES = "EDIT_RECIPES",
   DELETE_RECIPES = "DELETE_RECIPES",
-  PRINT_RECIPES = "PRINT RECIPES",
+  PRINT_RECIPES = "PRINT_RECIPES",
   VIEW_USERS = "VIEW_USERS",
   CREATE_USERS = "CREATE_USERS",
   EDIT_USERS = "EDIT_USERS",
@@ -34,11 +34,25 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.CREATE_RECIPES,
     Permission.PRINT_RECIPES,
     Permission.CREATE_USERS,
-    Permission.EDIT_USERS
+    Permission.EDIT_USERS,
   ],
   [UserRole.STAFF]: [Permission.VIEW_RECIPES],
 };
 
-export function hasPermission(role: UserRole, permission: Permission): boolean {
-  return RolePermissions[role].includes(permission);
+export function hasPermission(
+  role: UserRole | undefined,
+  permission: Permission
+): boolean {
+  if (role === undefined || !(role in UserRole)) {
+    console.warn(`Invalid role: ${role}`);
+    return false;
+  }
+
+  const permissions = RolePermissions[role];
+  if (!permissions) {
+    console.warn(`No permissions defined for role: ${role}`);
+    return false;
+  }
+
+  return permissions.includes(permission);
 }

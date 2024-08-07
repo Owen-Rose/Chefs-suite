@@ -3,6 +3,10 @@ import { MongoClient, MongoClientOptions } from "mongodb";
 const uri: string = process.env.MONGODB_URI!;
 const options: MongoClientOptions = {};
 
+declare global {
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
+}
+
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 

@@ -1,8 +1,29 @@
-import NextAuth, { NextAuthOptions } from "next-auth";
+import NextAuth, { NextAuthOptions, DefaultSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { compare } from "bcryptjs";
 import { UserRole } from "../../../types/Roles";
+
+// Extend the built-in session types
+declare module "next-auth" {
+  interface Session extends DefaultSession {
+    user: {
+      id: string;
+      role: UserRole;
+    } & DefaultSession["user"];
+  }
+
+  interface User {
+    role: UserRole;
+  }
+}
+
+// Extend the built-in JWT types
+declare module "next-auth/jwt" {
+  interface JWT {
+    role: UserRole;
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -39,7 +60,7 @@ export const authOptions: NextAuthOptions = {
           id: user._id.toString(),
           email: user.email,
           name: `${user.FirstName} ${user.LastName}`,
-          role: user.role,
+          role: user.role as UserRole,
         };
       },
     }),
@@ -53,16 +74,16 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session?.user) {
-        session.user.role = token.role as UserRole;
-        session.user.id = token.sub;
+        session.user.role = token.role;
+        session.user.id = token.sub ?? "";
       }
       return session;
     },
   },
   pages: {
-    signIn: '/login',
-    error: '/auth/error',
-    newUser: '/auth/new-user',
+    signIn: "/login",
+    error: "/auth/error",
+    newUser: "/auth/new-user",
   },
   session: {
     strategy: "jwt",
@@ -72,4 +93,4 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-export default NextAuth(authOptions); 
+export default NextAuth(authOptions);

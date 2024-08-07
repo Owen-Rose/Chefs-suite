@@ -7,7 +7,7 @@ import { RecipeProvider } from "../context/RecipeContext";
 function MyApp({ Component, pageProps }: AppProps) {
   return (
     <SessionProvider session={pageProps.session}>
-      <AuthProvider session={pageProps.session}>
+      <AuthProvider>
         <RecipeProvider>
           <Component {...pageProps} />
         </RecipeProvider>

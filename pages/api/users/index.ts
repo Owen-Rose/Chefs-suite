@@ -1,11 +1,14 @@
-import { NextApiRequest, NextApiResponse } from "next";
+import { NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { hash } from "bcryptjs";
-import { withApiAuth } from "../../../lib/auth-middleware";
+import {
+  withApiAuth,
+  ExtendedNextApiRequest,
+} from "../../../lib/auth-middleware";
 import { Permission } from "../../../types/Permission";
 import { UserRole } from "../../../types/Roles";
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
   const { db } = await connectToDatabase();
 
   switch (req.method) {
@@ -19,7 +22,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-async function getUsers(req: NextApiRequest, res: NextApiResponse) {
+async function getUsers(req: ExtendedNextApiRequest, res: NextApiResponse) {
   const { db } = await connectToDatabase();
   try {
     const users = await db
@@ -32,13 +35,27 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-async function createUser(req: NextApiRequest, res: NextApiResponse) {
+async function createUser(req: ExtendedNextApiRequest, res: NextApiResponse) {
   const { db } = await connectToDatabase();
   try {
     const { email, password, FirstName, LastName, role } = req.body;
+    const currentUserRole = req.user?.role;
+
+    if (!currentUserRole) {
+      return res.status(401).json({ error: "User role not found" });
+    }
 
     if (!email || !password || !FirstName || !LastName || !role) {
       return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Check if the current user is allowed to create a user with the given role
+    if (!isAllowedToCreateRole(currentUserRole, role as UserRole)) {
+      return res
+        .status(403)
+        .json({
+          error: "You don't have permission to create a user with this role",
+        });
     }
 
     const existingUser = await db.collection("users").findOne({ email });
@@ -66,6 +83,22 @@ async function createUser(req: NextApiRequest, res: NextApiResponse) {
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to create user" });
+  }
+}
+
+function isAllowedToCreateRole(
+  currentRole: UserRole,
+  targetRole: UserRole
+): boolean {
+  switch (currentRole) {
+    case UserRole.ADMIN:
+      return true;
+    case UserRole.CHEF:
+      return targetRole === UserRole.MANAGER || targetRole === UserRole.STAFF;
+    case UserRole.MANAGER:
+      return targetRole === UserRole.STAFF;
+    default:
+      return false;
   }
 }
 

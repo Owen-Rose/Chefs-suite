@@ -1,6 +1,13 @@
 import React, { createContext, useContext, ReactNode } from "react";
-import { signIn, signOut, Session } from "next-auth/react";
-import { SafeUser } from "../models/User";
+import { signIn, signOut, useSession } from "next-auth/react";
+import { UserRole } from "../types/Roles";
+
+interface SafeUser {
+  id: string;
+  email: string | null | undefined;
+  name: string | null | undefined;
+  role: UserRole;
+}
 
 interface AuthContextType {
   user: SafeUser | null;
@@ -12,17 +19,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
-  session: Session | null;
 }
 
-export const AuthProvider = ({ children, session }: AuthProviderProps) => {
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const { data: session } = useSession();
+
   const user: SafeUser | null = session?.user
     ? {
-      id: session.user.id as string,
-      email: session.user.email as string,
-      name: session.user.name as string,
-      role: session.user.role as string,
-    }
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        role: session.user.role as UserRole,
+      }
     : null;
 
   const login = async (email: string, password: string) => {

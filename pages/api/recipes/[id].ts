@@ -1,16 +1,19 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
-import { connectToDatabase } from '../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
-import { Permission, hasPermission } from '../../../types/Permission';
-import { UserRole } from '../../../types/Roles';
+import { connectToDatabase } from "../../../lib/mongodb";
+import { ObjectId } from "mongodb";
+import { Permission, hasPermission } from "../../../types/Permission";
+import { UserRole } from "../../../types/Roles";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const session = await getServerSession(req, res, authOptions);
 
   if (!session) {
-    return res.status(401).json({ error: 'Not authenticated' });
+    return res.status(401).json({ error: "Not authenticated" });
   }
 
   const { method } = req;
@@ -19,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { db } = await connectToDatabase();
 
   switch (method) {
-    case 'GET':
+    case "GET":
       try {
         const recipe = await db
           .collection("recipes")
@@ -34,8 +37,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       break;
     case "PUT":
-      if (!hasPermission(session.user?.role as UserRole, Permission.EDIT_RECIPES)) {
-        return res.status(403).json({ error: 'Not authorized to edit recipes' });
+      if (!hasPermission(session.user.role, Permission.EDIT_RECIPES)) {
+        return res
+          .status(403)
+          .json({ error: "Not authorized to edit recipes" });
       }
       try {
         const updatedRecipe = req.body;
@@ -55,22 +60,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(500).json({ error: "Failed to update recipe" });
       }
       break;
-    case 'DELETE':
-      if (!hasPermission(session.user?.role as UserRole, Permission.DELETE_RECIPES)) {
-        return res.status(403).json({ error: 'Not authorized to delete recipes' });
+    case "DELETE":
+      if (!hasPermission(session.user.role, Permission.DELETE_RECIPES)) {
+        return res
+          .status(403)
+          .json({ error: "Not authorized to delete recipes" });
       }
       try {
-        const result = await db.collection('recipes').deleteOne({ _id: new ObjectId(id as string) });
+        const result = await db
+          .collection("recipes")
+          .deleteOne({ _id: new ObjectId(id as string) });
         if (result.deletedCount === 0) {
-          return res.status(404).json({ error: 'Recipe not found' });
+          return res.status(404).json({ error: "Recipe not found" });
         }
-        res.status(200).json({ message: 'Recipe deleted successfully' });
+        res.status(200).json({ message: "Recipe deleted successfully" });
       } catch (error) {
-        res.status(500).json({ error: 'Failed to delete recipe' });
+        res.status(500).json({ error: "Failed to delete recipe" });
       }
       break;
     default:
-      res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+      res.setHeader("Allow", ["GET", "PUT", "DELETE"]);
       res.status(405).end(`Method ${method} Not Allowed`);
   }
 }

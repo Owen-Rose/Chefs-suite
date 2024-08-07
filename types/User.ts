@@ -12,10 +12,10 @@ export interface User {
   updatedAt: Date;
 }
 
-export interface SafeUser {
+export interface AuthUser {
   id: string;
-  FirstName: string;
-  LastName: string;
-  email: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
   role: UserRole;
 }

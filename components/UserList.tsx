@@ -32,6 +32,8 @@ import { User } from "../types/User";
 import { UserRole } from "../types/Roles";
 import { useAuth } from "../hooks/useAuth";
 import { Permission } from "../types/Permission";
+import { ObjectId } from "mongodb";
+type FormUser = Omit<User, "_id" | "createdAt" | "updatedAt">;
 
 const UserList: React.FC = () => {
   const { data: session, status } = useSession();
@@ -39,7 +41,7 @@ const UserList: React.FC = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState<Omit<User, "_id">>({
+  const [formData, setFormData] = useState<FormUser>({
     FirstName: "",
     LastName: "",
     email: "",
@@ -48,7 +50,14 @@ const UserList: React.FC = () => {
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: "" });
   const [searchTerm, setSearchTerm] = useState("");
-  const { hasPermission } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
+  const canEditUser = (userRole: UserRole) => {
+    if (currentUser?.role === UserRole.ADMIN) return true;
+    if (currentUser?.role === UserRole.CHEF) return userRole !== UserRole.ADMIN;
+    if (currentUser?.role === UserRole.MANAGER)
+      return userRole === UserRole.STAFF;
+    return false;
+  };
 
   useEffect(() => {
     if (session) {
@@ -77,11 +86,31 @@ const UserList: React.FC = () => {
       console.error("Error fetching users:", error);
       setSnackbar({ open: true, message: "Failed to fetch users" });
     }
+    const sessionUser = session?.user as { role: UserRole };
     console.log("Session status:", status);
-    console.log("User role:", session?.user?.role);
+    console.log("User role:", sessionUser?.role);
+  };
+
+  const getAvailableRoles = () => {
+    if (currentUser?.role === UserRole.ADMIN) {
+      return Object.values(UserRole);
+    } else if (currentUser?.role === UserRole.CHEF) {
+      return [UserRole.CHEF, UserRole.MANAGER, UserRole.STAFF];
+    } else if (currentUser?.role === UserRole.MANAGER) {
+      return [UserRole.STAFF];
+    }
+    return [];
   };
 
   const handleOpenModal = (user?: User) => {
+    if (user && !canEditUser(user.role)) {
+      setSnackbar({
+        open: true,
+        message: `You don't have permission to edit ${user.role} users.`,
+      });
+      return;
+    }
+
     if (user) {
       setSelectedUser(user);
       setFormData({
@@ -121,7 +150,20 @@ const UserList: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const url = selectedUser ? `/api/users/${selectedUser._id}` : "/api/users";
+      if (selectedUser && !canEditUser(selectedUser.role)) {
+        throw new Error(
+          `You don't have permission to edit ${selectedUser.role} users`
+        );
+      }
+
+      const availableRoles = getAvailableRoles();
+      if (!availableRoles.includes(formData.role)) {
+        throw new Error("You don't have permission to assign this role");
+      }
+
+      const url = selectedUser
+        ? `/api/users/${selectedUser._id}`
+        : "/api/users";
       const method = selectedUser ? "PUT" : "POST";
       const response = await fetch(url, {
         method,
@@ -131,17 +173,22 @@ const UserList: React.FC = () => {
       if (!response.ok) throw new Error("Failed to save user");
       fetchUsers();
       handleCloseModal();
-      setSnackbar({ open: true, message: `User ${selectedUser ? "updated" : "created"} successfully` });
+      setSnackbar({
+        open: true,
+        message: `User ${selectedUser ? "updated" : "created"} successfully`,
+      });
     } catch (error) {
       console.error("Error saving user:", error);
-      setSnackbar({ open: true, message: "Failed to save user" });
+      setSnackbar({ open: true, message: (error as Error).message });
     }
   };
 
   const handleDelete = async (userId: string) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
-        const response = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+        const response = await fetch(`/api/users/${userId}`, {
+          method: "DELETE",
+        });
         if (!response.ok) throw new Error("Failed to delete user");
         fetchUsers();
         setSnackbar({ open: true, message: "User deleted successfully" });
@@ -161,9 +208,10 @@ const UserList: React.FC = () => {
   }
 
   if (!hasPermission(Permission.VIEW_USERS)) {
-    return <Typography>You don't have permission to view this page.</Typography>;
+    return (
+      <Typography>You don&apos;t have permission to view this page.</Typography>
+    );
   }
-
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -206,15 +254,26 @@ const UserList: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow className="bg-gray-200">
-                <TableCell><strong>Name</strong></TableCell>
-                <TableCell><strong>Email</strong></TableCell>
-                <TableCell><strong>Role</strong></TableCell>
-                <TableCell><strong>Actions</strong></TableCell>
+                <TableCell>
+                  <strong>Name</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Email</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Role</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Actions</strong>
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredUsers.map((user) => (
-                <TableRow key={user._id} className="hover:bg-gray-50">
+                <TableRow
+                  key={user._id.toString()}
+                  className="hover:bg-gray-50"
+                >
                   <TableCell>{`${user.FirstName} ${user.LastName}`}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
@@ -227,19 +286,33 @@ const UserList: React.FC = () => {
                   <TableCell>
                     <div className="flex space-x-2">
                       {hasPermission(Permission.EDIT_USERS) && (
-                        <Tooltip title="Edit User">
-                          <IconButton onClick={() => handleOpenModal(user)}>
-                            <Edit />
-                          </IconButton>
+                        <Tooltip
+                          title={
+                            canEditUser(user.role)
+                              ? "Edit User"
+                              : `Cannot edit ${user.role} user`
+                          }
+                        >
+                          <span>
+                            <IconButton
+                              onClick={() => handleOpenModal(user)}
+                              disabled={!canEditUser(user.role)}
+                            >
+                              <Edit />
+                            </IconButton>
+                          </span>
                         </Tooltip>
                       )}
-                      {hasPermission(Permission.DELETE_USERS) && (
-                        <Tooltip title="Delete User">
-                          <IconButton onClick={() => handleDelete(user._id)}>
-                            <Delete />
-                          </IconButton>
-                        </Tooltip>
-                      )}
+                      {hasPermission(Permission.DELETE_USERS) &&
+                        canEditUser(user.role) && (
+                          <Tooltip title="Delete User">
+                            <IconButton
+                              onClick={() => handleDelete(user._id.toString())}
+                            >
+                              <Delete />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -301,7 +374,7 @@ const UserList: React.FC = () => {
                   fullWidth
                   required
                 >
-                  {Object.values(UserRole).map((role) => (
+                  {getAvailableRoles().map((role) => (
                     <MenuItem key={role} value={role}>
                       {role}
                     </MenuItem>
