@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { GetServerSideProps } from "next";
+import React, { useState, useEffect } from "react";
+
 import { useRouter } from "next/router";
 import {
   TextField,
@@ -24,40 +24,55 @@ import {
   Save,
 } from "@mui/icons-material";
 import { Recipe } from "../../types/Recipe";
-import { getSession } from "next-auth/react";
-import { Permission, hasPermission } from "../../types/Permission";
-import { UserRole } from "../../types/Roles";
-import { User } from "../../types/User";
 
-interface EditRecipePageProps {
-  recipe: Recipe;
-  error?: string;
-}
-
-const EditRecipePage: React.FC<EditRecipePageProps> = ({
-  recipe: initialRecipe,
-  error,
-}) => {
+const EditRecipePage: React.FC = () => {
   const router = useRouter();
-  const [recipe, setRecipe] = useState<Recipe>(initialRecipe);
+  const { id } = router.query;
+  const [recipe, setRecipe] = useState<Recipe>({
+    name: "",
+    createdDate: "",
+    version: "",
+    station: "",
+    batchNumber: 0,
+    equipment: [],
+    ingredients: [],
+    procedure: [],
+    yield: "",
+    portionSize: "",
+    portionsPerRecipe: "",
+  });
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  if (error) {
-    return (
-      <Box className="p-8 bg-gray-100 min-h-screen">
-        <Paper elevation={3} className="p-6 mb-6">
-          <Typography
-            variant="h4"
-            component="div"
-            className="font-bold mb-4 text-red-600"
-          >
-            {error}
-          </Typography>
-        </Paper>
-      </Box>
-    );
-  }
+  useEffect(() => {
+    if (id) {
+      fetch(`/api/recipes/${id}`)
+        .then((res) => res.json())
+        .then((data: Recipe) => {
+          // Ensure all properties have default values if they're null or undefined
+          setRecipe({
+            name: data.name || "",
+            createdDate: data.createdDate || "",
+            version: data.version || "",
+            station: data.station || "",
+            batchNumber: data.batchNumber || 0,
+            equipment: Array.isArray(data.equipment) ? data.equipment : [],
+            ingredients: Array.isArray(data.ingredients)
+              ? data.ingredients
+              : [],
+            procedure: Array.isArray(data.procedure) ? data.procedure : [],
+            yield: data.yield || "",
+            portionSize: data.portionSize || "",
+            portionsPerRecipe: data.portionsPerRecipe || "",
+          });
+        })
+        .catch((error) => {
+          console.error("Error fetching recipe:", error);
+          setErrorMessage("Failed to fetch recipe. Please try again.");
+          setSnackbarOpen(true);
+        });
+    }
+  }, [id]);
 
   const handleChange = (field: keyof Recipe, value: any) => {
     setRecipe((prev) => ({ ...prev, [field]: value }));
@@ -96,27 +111,25 @@ const EditRecipePage: React.FC<EditRecipePageProps> = ({
 
   const handleSave = async () => {
     try {
-      const response = await fetch(`/api/recipes/${recipe._id}`, {
+      const response = await fetch(`/api/recipes/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(recipe),
       });
 
       if (response.ok) {
-        setSnackbarMessage("Recipe saved successfully");
         setSnackbarOpen(true);
+        setErrorMessage("Recipe saved successfully");
         router.push("/");
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save recipe");
+        const error = await response.text();
+        console.error("Failed to update recipe:", error);
+        setErrorMessage("Failed to save recipe. Please try again.");
+        setSnackbarOpen(true);
       }
     } catch (error) {
       console.error("Error updating recipe:", error);
-      setSnackbarMessage(
-        error instanceof Error
-          ? error.message
-          : "An error occurred while saving. Please try again."
-      );
+      setErrorMessage("An error occurred while saving. Please try again.");
       setSnackbarOpen(true);
     }
   };
@@ -408,56 +421,10 @@ const EditRecipePage: React.FC<EditRecipePageProps> = ({
         open={snackbarOpen}
         autoHideDuration={6000}
         onClose={() => setSnackbarOpen(false)}
-        message={snackbarMessage}
+        message={errorMessage}
       />
     </Box>
   );
-};
-
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const session = await getSession(context);
-  const { id } = context.params as { id: string };
-
-  if (!session) {
-    return {
-      redirect: {
-        destination: "/login",
-        permanent: false,
-      },
-    };
-  }
-
-  const userRole = session.user?.role as UserRole;
-  if (!hasPermission(userRole, Permission.EDIT_RECIPES)) {
-    return {
-      props: {
-        error: "You don't have permission to edit recipes",
-      },
-    };
-  }
-
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/recipes/${id}`
-    );
-    if (!res.ok) {
-      throw new Error("Failed to fetch recipe");
-    }
-    const recipe = await res.json();
-
-    return {
-      props: {
-        recipe,
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching recipe:", error);
-    return {
-      props: {
-        error: "Failed to load recipe. Please try again.",
-      },
-    };
-  }
 };
 
 export default EditRecipePage;
