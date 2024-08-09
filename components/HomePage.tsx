@@ -18,17 +18,19 @@ import {
   IconButton,
   Tooltip,
   Menu,
+  Avatar,
+  AppBar,
+  Toolbar,
 } from "@mui/material";
 import {
   Search,
   Add,
-  Restaurant,
-  AccessTime,
   Description,
   Print,
   Edit,
   PeopleAlt,
   AccountCircle,
+  Archive as ArchiveIcon,
 } from "@mui/icons-material";
 import Link from "next/link";
 import { Recipe } from "@/types/Recipe";
@@ -44,6 +46,7 @@ const HomePage: React.FC = () => {
   const [stations, setStations] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("name");
   const { user, hasPermission } = useAuth();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -71,78 +74,88 @@ const HomePage: React.FC = () => {
       return 0;
     });
 
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
-  const handleClose = () => {
+
+  const handleProfileMenuClose = () => {
     setAnchorEl(null);
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <Typography
-            variant="h4"
-            component="h1"
-            className="font-bold text-gray-800"
-          >
+      <AppBar position="static" className="shadow-md">
+        <Toolbar className="justify-between">
+          <Typography variant="h6" className="text-gray-800 font-bold">
             Recipe Management System
           </Typography>
-          <div className="flex space-x-4 items-center">
+          <div className="flex items-center space-x-4">
             <ProtectedComponent requiredPermission={Permission.VIEW_USERS}>
-              <Link href="/users">
+              <Link href="/users" passHref>
                 <Button
-                  variant="contained"
-                  color="secondary"
+                  variant="outlined"
                   startIcon={<PeopleAlt />}
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="border-primary text-primary hover:bg-primary hover:bg-opacity-10"
                 >
                   Manage Users
                 </Button>
               </Link>
             </ProtectedComponent>
+            <ProtectedComponent requiredPermission={Permission.EDIT_RECIPES}>
+              <Link href="/archives" passHref>
+                <Button
+                  variant="outlined"
+                  startIcon={<ArchiveIcon />}
+                  className="border-primary text-primary hover:bg-primary hover:bg-opacity-10"
+                >
+                  Manage Archives
+                </Button>
+              </Link>
+            </ProtectedComponent>
             <ProtectedComponent requiredPermission={Permission.CREATE_RECIPES}>
-              <Link href="/add">
+              <Link href="/add" passHref>
                 <Button
                   variant="contained"
-                  color="primary"
                   startIcon={<Add />}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-secondary hover:bg-secondary-dark text-white"
                 >
                   Add New Recipe
                 </Button>
               </Link>
             </ProtectedComponent>
-            <IconButton
-              onClick={handleClick}
-              size="small"
-              sx={{ ml: 2 }}
-              aria-controls={open ? 'account-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={open ? 'true' : undefined}
-            >
-              <AccountCircle />
-            </IconButton>
-            <Menu
-              anchorEl={anchorEl}
-              id="account-menu"
-              open={open}
-              onClose={handleClose}
-              onClick={handleClose}
-            >
-              <MenuItem component={Link} href="/profile">
-                Profile
-              </MenuItem>
-              <MenuItem>
-                <LogoutButton />
-              </MenuItem>
-            </Menu>
+            <Tooltip title="Account settings">
+              <IconButton
+                onClick={handleProfileMenuOpen}
+                size="large"
+                className="ml-2"
+              >
+                <Avatar className="bg-accent">
+                  {user?.name ? user.name[0].toUpperCase() : <AccountCircle />}
+                </Avatar>
+              </IconButton>
+            </Tooltip>
           </div>
-        </div>
+        </Toolbar>
+      </AppBar>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleProfileMenuClose}
+        className="mt-2"
+      >
+        <MenuItem
+          component={Link}
+          href="/profile"
+          onClick={handleProfileMenuClose}
+        >
+          <AccountCircle className="mr-2" /> Profile
+        </MenuItem>
+        <MenuItem onClick={handleProfileMenuClose}>
+          <LogoutButton />
+        </MenuItem>
+      </Menu>
 
+      <div className="container mx-auto px-4 py-8">
         <Paper elevation={3} className="p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <TextField
@@ -230,7 +243,9 @@ const HomePage: React.FC = () => {
                           <Description />
                         </IconButton>
                       </Tooltip>
-                      <ProtectedComponent requiredPermission={Permission.EDIT_RECIPES}>
+                      <ProtectedComponent
+                        requiredPermission={Permission.EDIT_RECIPES}
+                      >
                         <Tooltip title="Edit Recipe">
                           <IconButton
                             component={Link}
@@ -240,7 +255,9 @@ const HomePage: React.FC = () => {
                           </IconButton>
                         </Tooltip>
                       </ProtectedComponent>
-                      <ProtectedComponent requiredPermission={Permission.PRINT_RECIPES}>
+                      <ProtectedComponent
+                        requiredPermission={Permission.PRINT_RECIPES}
+                      >
                         <Tooltip title="Print Recipe">
                           <IconButton
                             onClick={() => {

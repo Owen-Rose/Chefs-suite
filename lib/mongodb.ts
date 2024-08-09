@@ -29,6 +29,11 @@ export { clientPromise };
 
 export async function connectToDatabase() {
   const client = await clientPromise;
-  const db = client.db("recipesDB"); // replace with your database name if needed
-  return { db, client };
+  const db = client.db("recipesDB");
+  return {
+    db,
+    recipes: db.collection("recipes"),
+    users: db.collection("users"),
+    archives: db.collection("archives"), // New collection for archives
+  };
 }

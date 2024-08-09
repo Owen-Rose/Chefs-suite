@@ -1,4 +1,5 @@
 import { Ingredient } from "./Ingredient";
+import { ObjectId } from "mongodb";
 
 export interface Recipe {
   _id?: string;
@@ -15,4 +16,6 @@ export interface Recipe {
   procedure: string[];
   description?: string;
   foodCost?: number;
+  archiveId?: ObjectId | null;
+  archiveDate?: Date | null;
 }
