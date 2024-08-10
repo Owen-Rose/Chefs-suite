@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { GetServerSideProps } from "next";
 import { useRouter } from "next/router";
 import {
@@ -14,40 +14,36 @@ import {
   IconButton,
   Tooltip,
   Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
 } from "@mui/material";
-import { Edit, Delete, Print, ArrowBack } from "@mui/icons-material";
+import {
+  Edit,
+  Delete,
+  Print,
+  ArrowBack,
+  Archive as ArchiveIcon,
+} from "@mui/icons-material";
 import { connectToDatabase } from "../../lib/mongodb";
 import { ObjectId } from "mongodb";
 import { ParsedUrlQuery } from "querystring";
 import ProtectedComponent from "../../components/ProtectedComponent";
 import { Permission } from "@/types/Permission";
-
-interface Ingredient {
-  id: number;
-  productName: string;
-  quantity: number;
-  unit: string;
-}
-
-interface Recipe {
-  _id: string;
-  name: string;
-  createdDate: string;
-  version: string;
-  station: string;
-  batchNumber: number;
-  equipment: string[];
-  ingredients: Ingredient[];
-  yield: string;
-  portionSize: string;
-  portionsPerRecipe: string;
-  procedure: string[];
-}
+import { Recipe } from "@/types/Recipe";
+import { Archive } from "@/types/Archive";
+import { useAuth } from "@/hooks/useAuth";
 
 const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
   const router = useRouter();
-  const [snackbarOpen, setSnackbarOpen] = React.useState(false);
-  const [errorMessage, setErrorMessage] = React.useState("");
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
+  const [archives, setArchives] = useState<Archive[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { hasPermission } = useAuth();
 
   if (!recipe) return <div>Recipe not found</div>;
 
@@ -62,15 +58,60 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
         } else {
           const error = await response.text();
           console.error("Failed to delete recipe:", error);
-          setErrorMessage("Failed to delete recipe. Please try again.");
+          setSnackbarMessage("Failed to delete recipe. Please try again.");
           setSnackbarOpen(true);
         }
       } catch (error) {
         console.error("Error deleting recipe:", error);
-        setErrorMessage("An error occurred while deleting. Please try again.");
+        setSnackbarMessage(
+          "An error occurred while deleting. Please try again."
+        );
         setSnackbarOpen(true);
       }
     }
+  };
+
+  const handleOpenArchiveDialog = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/archives");
+      if (response.ok) {
+        const data = await response.json();
+        setArchives(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch archives:", error);
+      setSnackbarMessage("Failed to fetch archives. Please try again.");
+      setSnackbarOpen(true);
+    }
+    setIsLoading(false);
+    setIsArchiveDialogOpen(true);
+  };
+
+  const handleCloseArchiveDialog = () => {
+    setIsArchiveDialogOpen(false);
+  };
+
+  const handleArchiveRecipe = async (archiveId: string) => {
+    try {
+      const response = await fetch(`/api/recipes/${recipe._id}/archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archiveId }),
+      });
+      if (response.ok) {
+        setSnackbarMessage("Recipe archived successfully");
+        setSnackbarOpen(true);
+        router.push("/"); // Redirect to home page after archiving
+      } else {
+        throw new Error("Failed to archive recipe");
+      }
+    } catch (error) {
+      console.error("Failed to archive recipe:", error);
+      setSnackbarMessage("Failed to archive recipe. Please try again.");
+      setSnackbarOpen(true);
+    }
+    handleCloseArchiveDialog();
   };
 
   return (
@@ -108,7 +149,16 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
                   </IconButton>
                 </Tooltip>
               </ProtectedComponent>
-              <ProtectedComponent requiredPermission={Permission.DELETE_RECIPES}>
+              <ProtectedComponent requiredPermission={Permission.EDIT_RECIPES}>
+                <Tooltip title="Archive Recipe">
+                  <IconButton onClick={handleOpenArchiveDialog} color="primary">
+                    <ArchiveIcon />
+                  </IconButton>
+                </Tooltip>
+              </ProtectedComponent>
+              <ProtectedComponent
+                requiredPermission={Permission.DELETE_RECIPES}
+              >
                 <Tooltip title="Delete Recipe">
                   <IconButton onClick={handleDelete} color="error">
                     <Delete />
@@ -236,8 +286,9 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
                           {ingredient.productName || "Unnamed Ingredient"}
                         </Typography>
                         <Typography variant="body2">
-                          {`${ingredient.quantity || 0} ${ingredient.unit || ""
-                            }`}
+                          {`${ingredient.quantity || 0} ${
+                            ingredient.unit || ""
+                          }`}
                         </Typography>
                       </Paper>
                     ))
@@ -299,8 +350,31 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
         open={snackbarOpen}
         autoHideDuration={6000}
         onClose={() => setSnackbarOpen(false)}
-        message={errorMessage}
+        message={snackbarMessage}
       />
+      <Dialog open={isArchiveDialogOpen} onClose={handleCloseArchiveDialog}>
+        <DialogTitle>Select Archive</DialogTitle>
+        <DialogContent>
+          {isLoading ? (
+            <CircularProgress />
+          ) : (
+            <List>
+              {archives.map((archive) => (
+                <ListItem
+                  button
+                  key={archive._id?.toString()}
+                  onClick={() => handleArchiveRecipe(archive._id!.toString())}
+                >
+                  <ListItemText primary={archive.name} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseArchiveDialog}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

@@ -21,6 +21,16 @@ import {
   Avatar,
   AppBar,
   Toolbar,
+  Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  Snackbar,
+  CircularProgress,
 } from "@mui/material";
 import {
   Search,
@@ -34,6 +44,7 @@ import {
 } from "@mui/icons-material";
 import Link from "next/link";
 import { Recipe } from "@/types/Recipe";
+import { Archive } from "@/types/Archive";
 import ProtectedComponent from "./ProtectedComponent";
 import { useAuth } from "../hooks/useAuth";
 import LogoutButton from "./LogoutButton";
@@ -47,21 +58,37 @@ const HomePage: React.FC = () => {
   const [sortBy, setSortBy] = useState("name");
   const { user, hasPermission } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
+  const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
+  const [archives, setArchives] = useState<Archive[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
   useEffect(() => {
     if (user) {
-      fetch("/api/recipes/")
-        .then((res) => res.json())
-        .then((data: Recipe[]) => {
-          setRecipes(data);
-          const uniqueStations = Array.from(
-            new Set(data.map((recipe) => recipe.station))
-          );
-          setStations(uniqueStations);
-        })
-        .catch((error) => console.error("Error fetching recipes: ", error));
+      fetchRecipes();
     }
   }, [user]);
+
+  const fetchRecipes = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/recipes/");
+      if (!response.ok) throw new Error("Failed to fetch recipes");
+      const data: Recipe[] = await response.json();
+      setRecipes(data);
+      const uniqueStations = Array.from(
+        new Set(data.map((recipe) => recipe.station))
+      );
+      setStations(uniqueStations);
+    } catch (error) {
+      console.error("Error fetching recipes: ", error);
+      setSnackbarMessage("Failed to fetch recipes. Please try again.");
+      setSnackbarOpen(true);
+    }
+    setIsLoading(false);
+  };
 
   const filteredAndSortedRecipes = recipes
     .filter((recipe) =>
@@ -80,6 +107,64 @@ const HomePage: React.FC = () => {
 
   const handleProfileMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleRecipeSelect = (recipeId: string) => {
+    setSelectedRecipes((prev) =>
+      prev.includes(recipeId)
+        ? prev.filter((id) => id !== recipeId)
+        : [...prev, recipeId]
+    );
+  };
+
+  const handleSelectAllRecipes = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (event.target.checked) {
+      setSelectedRecipes(filteredAndSortedRecipes.map((recipe) => recipe._id!));
+    } else {
+      setSelectedRecipes([]);
+    }
+  };
+
+  const handleOpenArchiveDialog = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/archives");
+      if (!response.ok) throw new Error("Failed to fetch archives");
+      const data = await response.json();
+      setArchives(data);
+      setIsArchiveDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch archives:", error);
+      setSnackbarMessage("Failed to fetch archives. Please try again.");
+      setSnackbarOpen(true);
+    }
+    setIsLoading(false);
+  };
+
+  const handleCloseArchiveDialog = () => {
+    setIsArchiveDialogOpen(false);
+  };
+
+  const handleBatchArchive = async (archiveId: string) => {
+    try {
+      const response = await fetch("/api/recipes/batch-archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipeIds: selectedRecipes, archiveId }),
+      });
+      if (!response.ok) throw new Error("Failed to archive recipes");
+      fetchRecipes();
+      setSelectedRecipes([]);
+      setSnackbarMessage("Recipes archived successfully");
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error("Failed to archive recipes:", error);
+      setSnackbarMessage("Failed to archive recipes. Please try again.");
+      setSnackbarOpen(true);
+    }
+    handleCloseArchiveDialog();
   };
 
   return (
@@ -172,7 +257,7 @@ const HomePage: React.FC = () => {
               <InputLabel>Filter by Station</InputLabel>
               <Select
                 value={station}
-                onChange={(e) => setStation(e.target.value)}
+                onChange={(e) => setStation(e.target.value as string)}
                 label="Filter by Station"
               >
                 <MenuItem value="">
@@ -189,7 +274,7 @@ const HomePage: React.FC = () => {
               <InputLabel>Sort by</InputLabel>
               <Select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => setSortBy(e.target.value as string)}
                 label="Sort by"
               >
                 <MenuItem value="name">Name</MenuItem>
@@ -199,83 +284,149 @@ const HomePage: React.FC = () => {
           </div>
         </Paper>
 
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow className="bg-gray-200">
-                <TableCell>
-                  <strong>Name</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Station</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Date Created</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Version</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Actions</strong>
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredAndSortedRecipes.map((recipe) => (
-                <TableRow key={recipe._id} className="hover:bg-gray-50">
-                  <TableCell>{recipe.name}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={recipe.station}
-                      size="small"
-                      className="bg-blue-100 text-blue-800"
+        {selectedRecipes.length > 0 && (
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<ArchiveIcon />}
+            onClick={handleOpenArchiveDialog}
+            className="mb-4"
+          >
+            Archive Selected Recipes
+          </Button>
+        )}
+
+        {isLoading ? (
+          <CircularProgress />
+        ) : (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow className="bg-gray-200">
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      indeterminate={
+                        selectedRecipes.length > 0 &&
+                        selectedRecipes.length < filteredAndSortedRecipes.length
+                      }
+                      checked={
+                        selectedRecipes.length ===
+                        filteredAndSortedRecipes.length
+                      }
+                      onChange={handleSelectAllRecipes}
                     />
                   </TableCell>
-                  <TableCell>{recipe.createdDate || "N/A"}</TableCell>
-                  <TableCell>{recipe.version || "N/A"}</TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
-                      <Tooltip title="View Details">
-                        <IconButton
-                          component={Link}
-                          href={`/recipe/${recipe._id}`}
-                        >
-                          <Description />
-                        </IconButton>
-                      </Tooltip>
-                      <ProtectedComponent
-                        requiredPermission={Permission.EDIT_RECIPES}
-                      >
-                        <Tooltip title="Edit Recipe">
-                          <IconButton
-                            component={Link}
-                            href={`/edit/${recipe._id}`}
-                          >
-                            <Edit />
-                          </IconButton>
-                        </Tooltip>
-                      </ProtectedComponent>
-                      <ProtectedComponent
-                        requiredPermission={Permission.PRINT_RECIPES}
-                      >
-                        <Tooltip title="Print Recipe">
-                          <IconButton
-                            onClick={() => {
-                              /* Implement print functionality */
-                            }}
-                          >
-                            <Print />
-                          </IconButton>
-                        </Tooltip>
-                      </ProtectedComponent>
-                    </div>
+                    <strong>Name</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong>Station</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong>Date Created</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong>Version</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong>Actions</strong>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {filteredAndSortedRecipes.map((recipe) => (
+                  <TableRow key={recipe._id} className="hover:bg-gray-50">
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={selectedRecipes.includes(recipe._id!)}
+                        onChange={() => handleRecipeSelect(recipe._id!)}
+                      />
+                    </TableCell>
+                    <TableCell>{recipe.name}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={recipe.station}
+                        size="small"
+                        className="bg-blue-100 text-blue-800"
+                      />
+                    </TableCell>
+                    <TableCell>{recipe.createdDate || "N/A"}</TableCell>
+                    <TableCell>{recipe.version || "N/A"}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Tooltip title="View Details">
+                          <IconButton
+                            component={Link}
+                            href={`/recipe/${recipe._id}`}
+                          >
+                            <Description />
+                          </IconButton>
+                        </Tooltip>
+                        <ProtectedComponent
+                          requiredPermission={Permission.EDIT_RECIPES}
+                        >
+                          <Tooltip title="Edit Recipe">
+                            <IconButton
+                              component={Link}
+                              href={`/edit/${recipe._id}`}
+                            >
+                              <Edit />
+                            </IconButton>
+                          </Tooltip>
+                        </ProtectedComponent>
+                        <ProtectedComponent
+                          requiredPermission={Permission.PRINT_RECIPES}
+                        >
+                          <Tooltip title="Print Recipe">
+                            <IconButton
+                              onClick={() => {
+                                /* Implement print functionality */
+                              }}
+                            >
+                              <Print />
+                            </IconButton>
+                          </Tooltip>
+                        </ProtectedComponent>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </div>
+
+      <Dialog open={isArchiveDialogOpen} onClose={handleCloseArchiveDialog}>
+        <DialogTitle>Select Archive</DialogTitle>
+        <DialogContent>
+          {isLoading ? (
+            <CircularProgress />
+          ) : (
+            <List>
+              {archives.map((archive) => (
+                <ListItem
+                  button
+                  key={archive._id}
+                  onClick={() => handleBatchArchive(archive._id!.toString())}
+                >
+                  <ListItemText primary={archive.name} />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseArchiveDialog}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+      />
     </div>
   );
 };

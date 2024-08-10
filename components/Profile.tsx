@@ -1,158 +1,272 @@
 import React, { useState } from "react";
-import { useSession } from "next-auth/react";
 import {
+  AppBar,
+  Toolbar,
+  IconButton,
+  Typography,
   Container,
   Paper,
-  Typography,
   TextField,
   Button,
   Grid,
+  Avatar,
+  Divider,
   Snackbar,
-  CircularProgress,
+  Box,
+  InputAdornment,
 } from "@mui/material";
+import {
+  ArrowBack,
+  Save,
+  Person,
+  Email,
+  VpnKey,
+  Visibility,
+  VisibilityOff,
+} from "@mui/icons-material";
+import Link from "next/link";
 import { useAuth } from "../hooks/useAuth";
-import { User } from "../types/User";
 
-const Profile: React.FC = () => {
-  const { data: session, status } = useSession();
-  const { user } = useAuth();
-  const [passwords, setPasswords] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmNewPassword: "",
-  });
+const Profile = () => {
+  const [editing, setEditing] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPasswords((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwords.newPassword !== passwords.confirmNewPassword) {
-      setSnackbar({ open: true, message: "New passwords do not match" });
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/users/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword: passwords.currentPassword,
-          newPassword: passwords.newPassword,
-        }),
-      });
-
-      const responseText = await response.text();
-
-      let responseData;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (error) {
-        console.error("Error parsing JSON:", error);
-        throw new Error("Invalid response from server");
-      }
-
-      if (response.ok) {
-        setSnackbar({ open: true, message: "Password changed successfully" });
-        setPasswords({
-          currentPassword: "",
-          newPassword: "",
-          confirmNewPassword: "",
-        });
-      } else {
-        throw new Error(responseData.message || "Failed to change password");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      setSnackbar({
-        open: true,
-        message:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      });
-    }
+    setSnackbar({ open: true, message: "Profile updated successfully" });
+    setEditing(false);
   };
 
-  if (status === "loading") {
-    return <CircularProgress />;
-  }
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
 
-  if (!session) {
-    return <Typography>Please log in to view your profile.</Typography>;
-  }
+  const handleMouseDownPassword = (
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    event.preventDefault();
+  };
+
+  const handleFocus = (field: string) => {
+    setFocusedField(field);
+  };
+
+  const handleBlur = () => {
+    setFocusedField(null);
+  };
 
   return (
-    <Container maxWidth="md" className="mt-8">
-      <Paper elevation={3} className="p-6">
-        <Typography variant="h4" component="h1" gutterBottom>
-          Profile
-        </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1">Name: {user?.name}</Typography>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1">Email: {user?.email}</Typography>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="subtitle1">Role: {user?.role}</Typography>
-          </Grid>
-        </Grid>
-        <Typography variant="h6" className="mt-6 mb-4">
-          Change Password
-        </Typography>
-        <form onSubmit={handleSubmit}>
-          <TextField
-            name="currentPassword"
-            label="Current Password"
-            type="password"
-            value={passwords.currentPassword}
-            onChange={handleInputChange}
-            fullWidth
-            margin="normal"
-            required
-          />
-          <TextField
-            name="newPassword"
-            label="New Password"
-            type="password"
-            value={passwords.newPassword}
-            onChange={handleInputChange}
-            fullWidth
-            margin="normal"
-            required
-          />
-          <TextField
-            name="confirmNewPassword"
-            label="Confirm New Password"
-            type="password"
-            value={passwords.confirmNewPassword}
-            onChange={handleInputChange}
-            fullWidth
-            margin="normal"
-            required
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            className="mt-4"
+    <div className="min-h-screen bg-gray-50">
+      <AppBar position="static" className="bg-white shadow-md">
+        <Toolbar>
+          <IconButton
+            edge="start"
+            color="inherit"
+            aria-label="back"
+            component={Link}
+            href="/"
+            className="text-primary mr-4"
           >
-            Change Password
-          </Button>
-        </form>
-      </Paper>
+            <ArrowBack />
+          </IconButton>
+          <Typography
+            variant="h6"
+            className="text-primary font-semibold flex-grow"
+          >
+            Profile
+          </Typography>
+        </Toolbar>
+      </AppBar>
+
+      <Container maxWidth="sm" className="mt-12">
+        <Paper elevation={1} className="p-6 bg-white rounded-lg shadow-lg">
+          <Grid container spacing={4} alignItems="center">
+            <Grid item>
+              <Avatar
+                src={user?.image || "/default-avatar.png"}
+                className="w-24 h-24 border-4 border-primary"
+                alt={user?.name || "User"}
+              />
+            </Grid>
+            <Grid item xs>
+              <Typography variant="h5" className="font-bold text-gray-800">
+                {user?.name || "User Name"}
+              </Typography>
+              <Typography variant="subtitle1" className="text-gray-500">
+                {user?.role || "ROLE"}
+              </Typography>
+            </Grid>
+            <Grid item>
+              <Button
+                variant="contained"
+                color={editing ? "secondary" : "primary"}
+                className="normal-case"
+                startIcon={editing ? <Save /> : <Person />}
+                onClick={() => setEditing(!editing)}
+              >
+                {editing ? "Save Profile" : "Edit Profile"}
+              </Button>
+            </Grid>
+          </Grid>
+          <Grid container spacing={4}>
+            <Grid item xs={12}>
+              <Box className="mt-6">
+                <Typography
+                  variant="h6"
+                  className="font-semibold text-gray-800 mb-4"
+                >
+                  Profile Information
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Full Name"
+                      value={user?.name || ""}
+                      disabled={!editing}
+                      variant="outlined"
+                      InputProps={{
+                        startAdornment: (
+                          <Person className="text-gray-400 mr-2" />
+                        ),
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      value={user?.email || ""}
+                      disabled={!editing}
+                      variant="outlined"
+                      InputProps={{
+                        startAdornment: (
+                          <Email className="text-gray-400 mr-2" />
+                        ),
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Role"
+                      value={user?.role || ""}
+                      disabled
+                      variant="outlined"
+                      InputProps={{
+                        startAdornment: (
+                          <VpnKey className="text-gray-400 mr-2" />
+                        ),
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Divider className="my-6" />
+
+              <Box>
+                <Typography
+                  variant="h6"
+                  className="font-semibold text-gray-800 mb-4"
+                >
+                  Change Password
+                </Typography>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <TextField
+                    fullWidth
+                    label="Current Password"
+                    type={showPassword ? "text" : "password"}
+                    variant="outlined"
+                    required
+                    onFocus={() => handleFocus("currentPassword")}
+                    onBlur={handleBlur}
+                    InputProps={{
+                      endAdornment: focusedField === "currentPassword" && (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={handleClickShowPassword}
+                            onMouseDown={handleMouseDownPassword}
+                            edge="end"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="New Password"
+                    type={showPassword ? "text" : "password"}
+                    variant="outlined"
+                    required
+                    onFocus={() => handleFocus("newPassword")}
+                    onBlur={handleBlur}
+                    InputProps={{
+                      endAdornment: focusedField === "newPassword" && (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={handleClickShowPassword}
+                            onMouseDown={handleMouseDownPassword}
+                            edge="end"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Confirm New Password"
+                    type={showPassword ? "text" : "password"}
+                    variant="outlined"
+                    required
+                    onFocus={() => handleFocus("confirmPassword")}
+                    onBlur={handleBlur}
+                    InputProps={{
+                      endAdornment: focusedField === "confirmPassword" && (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={handleClickShowPassword}
+                            onMouseDown={handleMouseDownPassword}
+                            edge="end"
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    className="mt-4 bg-primary hover:bg-primary-dark"
+                  >
+                    Change Password
+                  </Button>
+                </form>
+              </Box>
+            </Grid>
+          </Grid>
+        </Paper>
+      </Container>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         message={snackbar.message}
       />
-    </Container>
+    </div>
   );
 };
 

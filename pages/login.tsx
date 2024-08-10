@@ -1,12 +1,24 @@
 import { useState } from "react";
-import { TextField, Button, Typography } from "@mui/material";
+import {
+  TextField,
+  Button,
+  Typography,
+  Checkbox,
+  FormControlLabel,
+  Link,
+} from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
 import { Login } from "@mui/icons-material";
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("email") || "" : ""
+  );
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(
+    () => typeof window !== "undefined" && !!localStorage.getItem("email")
+  );
   const { login } = useAuth();
   const router = useRouter();
 
@@ -14,10 +26,15 @@ const LoginPage = () => {
     e.preventDefault();
     try {
       await login(email, password);
+      if (rememberMe) {
+        localStorage.setItem("email", email);
+      } else {
+        localStorage.removeItem("email");
+      }
       router.push("/");
     } catch (error) {
       console.error("Failed to login", error);
-      // Here you might want to show an error message to the user
+      // You might want to show an error message to the user here
     }
   };
 
@@ -25,7 +42,7 @@ const LoginPage = () => {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
         <Typography variant="h4" className="text-center mb-6">
-          Login
+          Sign In
         </Typography>
         <form onSubmit={handleLogin}>
           <TextField
@@ -45,6 +62,21 @@ const LoginPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             className="mb-4"
           />
+          <div className="flex justify-between items-center mb-4">
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="Remember Me"
+            />
+            <Link href="/forgot-password" className="text-blue-600">
+              Forgot Password?
+            </Link>
+          </div>
           <Button
             type="submit"
             variant="contained"
