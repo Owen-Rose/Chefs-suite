@@ -1,4 +1,7 @@
-import { MongoClient, MongoClientOptions } from "mongodb";
+import { MongoClient, MongoClientOptions, Db, Collection } from "mongodb";
+import { Recipe } from "../types/Recipe"; // You'll need to create this type
+import { User } from "../types/User"; // You'll need to create this type
+import { Archive } from "../types/Archive"; // You'll need to create this type
 
 const uri: string = process.env.MONGODB_URI!;
 const options: MongoClientOptions = {};
@@ -27,13 +30,20 @@ if (process.env.NODE_ENV === "development") {
 
 export { clientPromise };
 
-export async function connectToDatabase() {
+export async function connectToDatabase(): Promise<{
+  client: MongoClient;
+  db: Db;
+  recipes: Collection<Recipe>;
+  users: Collection<User>;
+  archives: Collection<Archive>;
+}> {
   const client = await clientPromise;
   const db = client.db("recipesDB");
   return {
+    client,
     db,
-    recipes: db.collection("recipes"),
-    users: db.collection("users"),
-    archives: db.collection("archives"), // New collection for archives
+    recipes: db.collection<Recipe>("recipes"),
+    users: db.collection<User>("users"),
+    archives: db.collection<Archive>("archives"),
   };
 }

@@ -53,10 +53,11 @@ async function createArchive(
       createdDate: new Date(),
       lastModifiedDate: new Date(),
       createdBy: userId,
+      recipes: [], // Initialize the recipes array
     };
 
     const result = await archives.insertOne(newArchive);
-    res.status(201).json({ ...newArchive, _id: result.insertId });
+    res.status(201).json({ ...newArchive, _id: result.insertedId });
   } catch (error) {
     res.status(500).json({ error: "Failed to create archive" });
   }

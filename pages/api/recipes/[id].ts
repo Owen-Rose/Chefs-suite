@@ -6,6 +6,7 @@ import {
   ExtendedNextApiRequest,
 } from "../../../lib/auth-middleware";
 import { Permission } from "../../../types/Permission";
+import { Recipe } from "../../../types/Recipe";
 
 async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
   const { method } = req;
@@ -41,7 +42,9 @@ async function getRecipe(req: ExtendedNextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
 
   try {
-    const recipe = await recipes.findOne({ _id: new ObjectId(id as string) });
+    const recipe = await recipes.findOne({
+      _id: new ObjectId(id as string),
+    } as any);
     if (!recipe) {
       return res.status(404).json({ error: "Recipe not found" });
     }
@@ -60,7 +63,7 @@ async function updateRecipe(req: ExtendedNextApiRequest, res: NextApiResponse) {
     const updatedRecipe = req.body;
     delete updatedRecipe._id;
     const result = await recipes.updateOne(
-      { _id: new ObjectId(id as string) },
+      { _id: new ObjectId(id as string) } as any,
       { $set: updatedRecipe }
     );
     if (result.matchedCount === 0) {
@@ -78,7 +81,9 @@ async function deleteRecipe(req: ExtendedNextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
 
   try {
-    const result = await recipes.deleteOne({ _id: new ObjectId(id as string) });
+    const result = await recipes.deleteOne({
+      _id: new ObjectId(id as string),
+    } as any);
     if (result.deletedCount === 0) {
       return res.status(404).json({ error: "Recipe not found" });
     }
@@ -101,13 +106,15 @@ async function archiveRecipe(
   }
 
   try {
-    const archive = await archives.findOne({ _id: new ObjectId(archiveId) });
+    const archive = await archives.findOne({
+      _id: new ObjectId(archiveId),
+    } as any);
     if (!archive) {
       return res.status(404).json({ error: "Archive not found" });
     }
 
     const result = await recipes.updateOne(
-      { _id: new ObjectId(id as string) },
+      { _id: new ObjectId(id as string) } as any,
       {
         $set: {
           archiveId: new ObjectId(archiveId),
@@ -135,7 +142,7 @@ async function unarchiveRecipe(
 
   try {
     const result = await recipes.updateOne(
-      { _id: new ObjectId(id as string) },
+      { _id: new ObjectId(id as string) } as any,
       { $set: { archiveId: null, archivedDate: null } }
     );
 

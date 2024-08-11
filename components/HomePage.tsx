@@ -406,8 +406,8 @@ const HomePage: React.FC = () => {
             <List>
               {archives.map((archive) => (
                 <ListItem
-                  button
-                  key={archive._id}
+                  button={true}
+                  key={archive._id!.toString()}
                   onClick={() => handleBatchArchive(archive._id!.toString())}
                 >
                   <ListItemText primary={archive.name} />

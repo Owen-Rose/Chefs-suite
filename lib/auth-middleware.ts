@@ -8,6 +8,7 @@ import { UserRole } from "../types/Roles";
 export interface ExtendedNextApiRequest extends NextApiRequest {
   user?: {
     role: UserRole;
+    id: string;
     // Add other user properties as needed
   };
 }
@@ -32,6 +33,7 @@ export function withApiAuth(
     // Add user information to the request object
     req.user = {
       role: userRole,
+      id: session.user.id as string,
     };
 
     return handler(req, res);

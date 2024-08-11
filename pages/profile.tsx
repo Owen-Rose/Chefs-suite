@@ -1,13 +1,14 @@
-import React from 'react';
-import Profile from '../components/Profile';
-import ProtectedRoute from '../components/ProtectedRoute';
+import React from "react";
+import Profile from "../components/Profile";
+import ProtectedRoute from "../components/ProtectedRoute";
+import { Permission } from "../types/Permission";
 
 const ProfilePage: React.FC = () => {
-    return (
-        <ProtectedRoute>
-            <Profile />
-        </ProtectedRoute>
-    );
+  return (
+    <ProtectedRoute requiredPermission={Permission.ACCESS_APP}>
+      <Profile />
+    </ProtectedRoute>
+  );
 };
 
 export default ProfilePage;

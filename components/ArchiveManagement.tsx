@@ -61,10 +61,10 @@ const ArchiveManagement: React.FC = () => {
   const fetchArchivedRecipes = async (archiveId: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/archives/${archiveId}?recipes=true`);
+      const response = await fetch(`/api/archives/${archiveId}`);
       if (response.ok) {
         const data = await response.json();
-        setArchivedRecipes(Array.isArray(data) ? data : []);
+        setArchivedRecipes(data.recipes || []);
       } else {
         throw new Error("Failed to fetch archived recipes");
       }
@@ -91,8 +91,8 @@ const ArchiveManagement: React.FC = () => {
 
   const handleEditArchive = (archive: Archive) => {
     setDialogMode("edit");
-    setArchiveName(archive.name);
-    setArchiveDescription(archive.description || "");
+    setArchiveName(archive.name.toString());
+    setArchiveDescription(archive.description?.toString() || "");
     setSelectedArchive(archive);
     setIsDialogOpen(true);
   };

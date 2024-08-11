@@ -77,15 +77,10 @@ async function deleteArchive(
   req: ExtendedNextApiRequest,
   res: NextApiResponse
 ) {
-  const { archives, recipes } = await connectToDatabase();
+  const { archives } = await connectToDatabase();
   const { id } = req.query;
 
   try {
-    await recipes.updateMany(
-      { archiveId: new ObjectId(id as string) },
-      { $set: { archiveId: null, archiveDate: null } }
-    );
-
     const result = await archives.deleteOne({
       _id: new ObjectId(id as string),
     });
@@ -97,23 +92,6 @@ async function deleteArchive(
     res.status(200).json({ message: "Archive deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: "Failed to delete archive" });
-  }
-}
-
-async function getArchiveRecipes(
-  req: ExtendedNextApiRequest,
-  res: NextApiResponse
-) {
-  const { recipes } = await connectToDatabase();
-  const { id } = req.query;
-
-  try {
-    const archivedRecipes = await recipes
-      .find({ archiveId: new ObjectId(id as string) })
-      .toArray();
-    res.status(200).json(archivedRecipes);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch archived recipes" });
   }
 }
 

@@ -1,6 +1,7 @@
 import { UserRole } from "./Roles";
 
 export enum Permission {
+  ACCESS_APP = "ACCESS_APP",
   VIEW_RECIPES = "VIEW_RECIPES",
   CREATE_RECIPES = "CREATE_RECIPES",
   EDIT_RECIPES = "EDIT_RECIPES",
@@ -16,6 +17,7 @@ export enum Permission {
 export const RolePermissions: Record<UserRole, Permission[]> = {
   [UserRole.ADMIN]: Object.values(Permission),
   [UserRole.CHEF]: [
+    Permission.ACCESS_APP,
     Permission.VIEW_RECIPES,
     Permission.CREATE_RECIPES,
     Permission.EDIT_RECIPES,
@@ -28,6 +30,7 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.MANAGE_ROLES,
   ],
   [UserRole.MANAGER]: [
+    Permission.ACCESS_APP,
     Permission.VIEW_RECIPES,
     Permission.VIEW_USERS,
     Permission.EDIT_RECIPES,
@@ -36,7 +39,7 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.CREATE_USERS,
     Permission.EDIT_USERS,
   ],
-  [UserRole.STAFF]: [Permission.VIEW_RECIPES],
+  [UserRole.STAFF]: [Permission.ACCESS_APP, Permission.VIEW_RECIPES],
 };
 
 export function hasPermission(

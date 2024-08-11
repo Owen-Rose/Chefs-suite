@@ -94,18 +94,18 @@ const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
 
   const handleArchiveRecipe = async (archiveId: string) => {
     try {
-      const response = await fetch(`/api/recipes/${recipe._id}/archive`, {
+      const response = await fetch(`/api/recipes/${recipe!._id}/archive`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ archiveId }),
       });
-      if (response.ok) {
-        setSnackbarMessage("Recipe archived successfully");
-        setSnackbarOpen(true);
-        router.push("/"); // Redirect to home page after archiving
-      } else {
-        throw new Error("Failed to archive recipe");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      const data = await response.json();
+      setSnackbarMessage("Recipe archived successfully");
+      setSnackbarOpen(true);
+      router.push("/"); // Redirect to home page after archiving
     } catch (error) {
       console.error("Failed to archive recipe:", error);
       setSnackbarMessage("Failed to archive recipe. Please try again.");
