@@ -15,6 +15,10 @@ import {
   Grid,
   Tooltip,
   Fab,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import {
   AddCircleOutline,
@@ -36,7 +40,7 @@ const AddRecipePage: React.FC = () => {
     name: "",
     createdDate: new Date().toISOString(),
     version: "1.0",
-    station: "Main",
+    station: "Garde Manger",
     batchNumber: 1,
     equipment: [],
     ingredients: [{ id: 0, productName: "", quantity: 0, unit: "" }],
@@ -149,13 +153,19 @@ const AddRecipePage: React.FC = () => {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Station"
-                  variant="outlined"
-                  fullWidth
-                  value={recipe.station}
-                  onChange={(e) => handleChange("station", e.target.value)}
-                />
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Station</InputLabel>
+                  <Select
+                    value={recipe.station}
+                    onChange={(e) => handleChange("station", e.target.value)}
+                    label="Station"
+                  >
+                    <MenuItem value="Garde Manger">Garde Manger</MenuItem>
+                    <MenuItem value="Entremetier">Entremetier</MenuItem>
+                    <MenuItem value="Pastry">Pastry</MenuItem>
+                    <MenuItem value="Functions">Functions</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
