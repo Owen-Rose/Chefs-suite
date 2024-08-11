@@ -40,6 +40,11 @@ const Profile = () => {
   const [lastName, setLastName] = useState(user?.name?.split(" ")[1] || "");
   const [email, setEmail] = useState(user?.email || "");
 
+  // State for passwords
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
@@ -71,6 +76,45 @@ const Profile = () => {
       setSnackbar({ open: true, message: "Failed to update profile" });
     } finally {
       setEditing(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      setSnackbar({ open: true, message: "Passwords do not match" });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/users/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      if (response.ok) {
+        setSnackbar({ open: true, message: "Password changed successfully" });
+        // Clear password fields
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        const errorData = await response.json();
+        setSnackbar({
+          open: true,
+          message: errorData.message || "Failed to change password",
+        });
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: "Failed to change password",
+      });
     }
   };
 
@@ -249,13 +293,15 @@ const Profile = () => {
                 >
                   Change Password
                 </Typography>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form className="space-y-4">
                   <TextField
                     fullWidth
                     label="Current Password"
                     type={showPassword ? "text" : "password"}
                     variant="outlined"
                     required
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
                     onFocus={() => handleFocus("currentPassword")}
                     onBlur={handleBlur}
                     InputProps={{
@@ -279,6 +325,8 @@ const Profile = () => {
                     type={showPassword ? "text" : "password"}
                     variant="outlined"
                     required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
                     onFocus={() => handleFocus("newPassword")}
                     onBlur={handleBlur}
                     InputProps={{
@@ -302,6 +350,8 @@ const Profile = () => {
                     type={showPassword ? "text" : "password"}
                     variant="outlined"
                     required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     onFocus={() => handleFocus("confirmPassword")}
                     onBlur={handleBlur}
                     InputProps={{
@@ -320,10 +370,11 @@ const Profile = () => {
                     }}
                   />
                   <Button
-                    type="submit"
+                    type="button"
                     variant="contained"
                     color="primary"
                     className="mt-4 bg-primary hover:bg-primary-dark"
+                    onClick={handleChangePassword}
                   >
                     Change Password
                   </Button>

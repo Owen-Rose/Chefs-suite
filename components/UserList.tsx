@@ -54,6 +54,8 @@ const UserList: React.FC = () => {
   const canEditUser = (userRole: UserRole) => {
     if (currentUser?.role === UserRole.ADMIN) return true;
     if (currentUser?.role === UserRole.CHEF) return userRole !== UserRole.ADMIN;
+    if (currentUser?.role === UserRole.PASTRY_CHEF)
+      return userRole !== UserRole.ADMIN && userRole !== UserRole.HEAD_CHEF;
     if (currentUser?.role === UserRole.MANAGER)
       return userRole === UserRole.STAFF;
     return false;
