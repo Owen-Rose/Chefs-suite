@@ -1,73 +1,80 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { ObjectId } from "mongodb";
 import { connectToDatabase } from "../../../lib/mongodb";
-import { withApiAuth } from "../../../lib/auth-middleware";
-import { Permission } from "../../../types/Permission";
+import { ObjectId } from "mongodb";
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 
   const { recipeIds, archiveId } = req.body;
 
-  if (!recipeIds || !archiveId) {
+  if (
+    !recipeIds ||
+    !Array.isArray(recipeIds) ||
+    recipeIds.length === 0 ||
+    !archiveId
+  ) {
     return res.status(400).json({ message: "Missing required parameters" });
   }
 
   try {
-    const { db, client } = await connectToDatabase();
+    const { db } = await connectToDatabase();
+    const archivesCollection = db.collection("archives");
+    const recipesCollection = db.collection("recipes");
 
-    const session = client.startSession();
-
-    try {
-      await session.withTransaction(async () => {
-        const archive = await db
-          .collection("archives")
-          .findOne({ _id: new ObjectId(archiveId) });
-
-        if (!archive) {
-          throw new Error("Archive not found");
-        }
-
-        const recipesToRestore = archive.recipes.filter((recipe: any) =>
-          recipeIds.includes(recipe.originalId.toString())
-        );
-
-        await db.collection("recipes").insertMany(
-          recipesToRestore.map((recipe: any) => {
-            const { archivedDate, originalId, ...restOfRecipe } = recipe;
-            return { ...restOfRecipe, _id: originalId };
-          }),
-          { session }
-        );
-
-        await db.collection("archives").updateOne(
-          { _id: new ObjectId(archiveId) },
-          {
-            $pull: {
-              recipes: {
-                originalId: {
-                  $in: recipeIds.map((id: string) => new ObjectId(id)),
-                },
-              },
-            } as any,
-          },
-          { session }
-        );
-      });
-
-      res.status(200).json({ message: "Recipes restored successfully" });
-    } finally {
-      await session.endSession();
+    // Find the archive
+    const archive = await archivesCollection.findOne({
+      _id: new ObjectId(archiveId),
+    });
+    if (!archive) {
+      return res.status(404).json({ message: "Archive not found" });
     }
+
+    // Filter out the recipes to be restored
+    const recipesToRestore = archive.recipes.filter((recipe: any) =>
+      recipeIds.includes(recipe.originalId.toString())
+    );
+
+    if (recipesToRestore.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "No matching recipes found to restore" });
+    }
+
+    // Restore the recipes to the main collection
+    const restoreOperations = recipesToRestore.map((recipe: any) => {
+      const { archivedDate, archiveId, ...restOfRecipe } = recipe;
+      return {
+        replaceOne: {
+          filter: { _id: recipe.originalId },
+          replacement: { ...restOfRecipe, _id: recipe.originalId },
+          upsert: true,
+        },
+      };
+    });
+
+    await recipesCollection.bulkWrite(restoreOperations);
+
+    // Remove the restored recipes from the archive
+    await archivesCollection.updateOne({ _id: new ObjectId(archiveId) }, {
+      $pull: {
+        recipes: {
+          originalId: {
+            $in: recipeIds.map((id: string) => new ObjectId(id)),
+          },
+        },
+      },
+    } as any);
+
+    res.status(200).json({
+      message: `Successfully restored ${recipesToRestore.length} recipes`,
+    });
   } catch (error) {
     console.error("Error restoring recipes:", error);
-    res.status(500).json({
-      message: "Internal Server Error",
-      error: (error as Error).message,
-    });
+    res.status(500).json({ message: "Internal server error" });
   }
 }
-
-export default withApiAuth(handler, Permission.EDIT_RECIPES);

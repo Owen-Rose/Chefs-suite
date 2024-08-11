@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 
 export interface Recipe {
   _id?: string;
+  originalId?: string | ObjectId;
   name: string;
   createdDate: string;
   version: string;

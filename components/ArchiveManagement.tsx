@@ -15,8 +15,17 @@ import {
   Checkbox,
   Snackbar,
   CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  ListItemIcon,
+  Box,
 } from "@mui/material";
-import { Edit, Delete, Add, Unarchive } from "@mui/icons-material";
+import { Edit, Delete, Add, Unarchive, Info } from "@mui/icons-material";
 import { Archive } from "../types/Archive";
 import { Recipe } from "../types/Recipe";
 import { useAuth } from "../hooks/useAuth";
@@ -34,6 +43,8 @@ const ArchiveManagement: React.FC = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [isRecipeDialogOpen, setIsRecipeDialogOpen] = useState(false);
   const { hasPermission } = useAuth();
 
   useEffect(() => {
@@ -64,7 +75,11 @@ const ArchiveManagement: React.FC = () => {
       const response = await fetch(`/api/archives/${archiveId}`);
       if (response.ok) {
         const data = await response.json();
-        setArchivedRecipes(data.recipes || []);
+        const recipes = (data.recipes || []).map((recipe: Recipe) => ({
+          ...recipe,
+          originalId: recipe.originalId || recipe.name,
+        }));
+        setArchivedRecipes(recipes);
       } else {
         throw new Error("Failed to fetch archived recipes");
       }
@@ -166,23 +181,56 @@ const ArchiveManagement: React.FC = () => {
   };
 
   const handleRestoreRecipes = async () => {
+    if (!selectedArchive) {
+      setSnackbarMessage(
+        "No archive selected. Please select an archive first."
+      );
+      setSnackbarOpen(true);
+      return;
+    }
+
     try {
+      const recipesToRestore = selectedRecipes
+        .map((recipeId) => {
+          const recipe = archivedRecipes.find(
+            (r) => r.originalId?.toString() === recipeId
+          );
+          return recipe ? recipe.originalId : null;
+        })
+        .filter((id) => id !== null);
+
+      if (recipesToRestore.length === 0) {
+        setSnackbarMessage("No valid recipes selected for restoration.");
+        setSnackbarOpen(true);
+        return;
+      }
+
       const response = await fetch("/api/recipes/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipeIds: selectedRecipes }),
+        body: JSON.stringify({
+          recipeIds: recipesToRestore,
+          archiveId: selectedArchive._id,
+        }),
       });
+
       if (response.ok) {
-        setSnackbarMessage("Recipes restored successfully");
+        const result = await response.json();
+        setSnackbarMessage(result.message || "Recipes restored successfully");
         setSnackbarOpen(true);
-        fetchArchivedRecipes(selectedArchive!._id!.toString());
+        fetchArchivedRecipes(selectedArchive._id!.toString());
         setSelectedRecipes([]);
       } else {
-        throw new Error("Failed to restore recipes");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to restore recipes");
       }
     } catch (error) {
       console.error("Failed to restore recipes:", error);
-      setSnackbarMessage("Failed to restore recipes. Please try again.");
+      setSnackbarMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to restore recipes. Please try again."
+      );
       setSnackbarOpen(true);
     }
   };
@@ -193,6 +241,16 @@ const ArchiveManagement: React.FC = () => {
         ? prev.filter((id) => id !== recipeId)
         : [...prev, recipeId]
     );
+  };
+
+  const handleRecipeClick = (recipe: Recipe) => {
+    setSelectedRecipe(recipe);
+    setIsRecipeDialogOpen(true);
+  };
+
+  const handleRecipeDialogClose = () => {
+    setIsRecipeDialogOpen(false);
+    setSelectedRecipe(null);
   };
 
   return (
@@ -264,16 +322,46 @@ const ArchiveManagement: React.FC = () => {
               {archivedRecipes.length > 0 ? (
                 <List>
                   {archivedRecipes.map((recipe) => (
-                    <ListItem key={recipe._id?.toString()}>
-                      <Checkbox
-                        checked={selectedRecipes.includes(
-                          recipe._id!.toString()
-                        )}
-                        onChange={() =>
-                          handleRecipeSelect(recipe._id!.toString())
-                        }
-                      />
-                      <ListItemText primary={recipe.name} />
+                    <ListItem
+                      key={recipe.originalId?.toString() || recipe.name}
+                      disablePadding
+                    >
+                      <ListItemIcon>
+                        <Checkbox
+                          edge="start"
+                          checked={selectedRecipes.includes(
+                            recipe.originalId?.toString() || recipe.name
+                          )}
+                          onChange={() =>
+                            handleRecipeSelect(
+                              recipe.originalId?.toString() || recipe.name
+                            )
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </ListItemIcon>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexGrow: 1,
+                          alignItems: "center",
+                          cursor: "pointer",
+                          "&:hover": { backgroundColor: "action.hover" },
+                          padding: "8px",
+                        }}
+                        onClick={() => handleRecipeClick(recipe)}
+                      >
+                        <ListItemText primary={recipe.name} />
+                        <IconButton
+                          edge="end"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRecipeClick(recipe);
+                          }}
+                        >
+                          <Info />
+                        </IconButton>
+                      </Box>
                     </ListItem>
                   ))}
                 </List>
@@ -327,6 +415,78 @@ const ArchiveManagement: React.FC = () => {
           </Button>
           <Button onClick={handleDialogSubmit} color="primary">
             {dialogMode === "create" ? "Create" : "Save"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={isRecipeDialogOpen}
+        onClose={handleRecipeDialogClose}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>{selectedRecipe?.name}</DialogTitle>
+        <DialogContent>
+          {selectedRecipe && (
+            <>
+              <Typography variant="body1">
+                Created: {selectedRecipe.createdDate}
+              </Typography>
+              <Typography variant="body1">
+                Version: {selectedRecipe.version}
+              </Typography>
+              <Typography variant="body1">
+                Station: {selectedRecipe.station}
+              </Typography>
+              <Typography variant="body1">
+                Batch Number: {selectedRecipe.batchNumber}
+              </Typography>
+
+              <Typography
+                variant="h6"
+                gutterBottom
+                style={{ marginTop: "16px" }}
+              >
+                Ingredients
+              </Typography>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Quantity</TableCell>
+                      <TableCell>Unit</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {selectedRecipe.ingredients.map((ingredient, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{ingredient.productName}</TableCell>
+                        <TableCell>{ingredient.quantity}</TableCell>
+                        <TableCell>{ingredient.unit}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <Typography
+                variant="h6"
+                gutterBottom
+                style={{ marginTop: "16px" }}
+              >
+                Procedure
+              </Typography>
+              <ol>
+                {selectedRecipe.procedure.map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))}
+              </ol>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleRecipeDialogClose} color="primary">
+            Close
           </Button>
         </DialogActions>
       </Dialog>

@@ -154,14 +154,21 @@ const HomePage: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipeIds: selectedRecipes, archiveId }),
       });
-      if (!response.ok) throw new Error("Failed to archive recipes");
-      fetchRecipes();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to archive recipes");
+      }
+      await fetchRecipes();
       setSelectedRecipes([]);
       setSnackbarMessage("Recipes archived successfully");
       setSnackbarOpen(true);
     } catch (error) {
       console.error("Failed to archive recipes:", error);
-      setSnackbarMessage("Failed to archive recipes. Please try again.");
+      setSnackbarMessage(
+        error instanceof Error
+          ? error.message
+          : "Failed to archive recipes. Please try again."
+      );
       setSnackbarOpen(true);
     }
     handleCloseArchiveDialog();
@@ -285,15 +292,17 @@ const HomePage: React.FC = () => {
         </Paper>
 
         {selectedRecipes.length > 0 && (
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={<ArchiveIcon />}
-            onClick={handleOpenArchiveDialog}
-            className="mb-4"
-          >
-            Archive Selected Recipes
-          </Button>
+          <ProtectedComponent requiredPermission={Permission.EDIT_RECIPES}>
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<ArchiveIcon />}
+              onClick={handleOpenArchiveDialog}
+              className="mb-4"
+            >
+              Archive Selected Recipes
+            </Button>
+          </ProtectedComponent>
         )}
 
         {isLoading ? (
