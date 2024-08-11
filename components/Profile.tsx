@@ -26,18 +26,52 @@ import {
 } from "@mui/icons-material";
 import Link from "next/link";
 import { useAuth } from "../hooks/useAuth";
+import { AuthUser } from "../types/User"; // Adjust the import path as necessary
 
 const Profile = () => {
   const [editing, setEditing] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user }: { user: AuthUser | null } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSnackbar({ open: true, message: "Profile updated successfully" });
-    setEditing(false);
+  // State for first name, last name, and email based on user schema
+  const [firstName, setFirstName] = useState(user?.name?.split(" ")[0] || "");
+  const [lastName, setLastName] = useState(user?.name?.split(" ")[1] || "");
+  const [email, setEmail] = useState(user?.email || "");
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    try {
+      const response = await fetch(`/api/users/${user?.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          FirstName: firstName,
+          LastName: lastName,
+          email: email,
+          role: user?.role,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSnackbar({ open: true, message: "Profile updated successfully" });
+      } else {
+        const errorData = await response.json();
+        setSnackbar({
+          open: true,
+          message: errorData.error || "Failed to update profile",
+        });
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: "Failed to update profile" });
+    } finally {
+      setEditing(false);
+    }
   };
 
   const handleClickShowPassword = () => {
@@ -105,7 +139,13 @@ const Profile = () => {
                 color={editing ? "secondary" : "primary"}
                 className="normal-case"
                 startIcon={editing ? <Save /> : <Person />}
-                onClick={() => setEditing(!editing)}
+                onClick={() => {
+                  if (editing) {
+                    handleSubmit();
+                  } else {
+                    setEditing(true);
+                  }
+                }}
               >
                 {editing ? "Save Profile" : "Edit Profile"}
               </Button>
@@ -121,25 +161,59 @@ const Profile = () => {
                   Profile Information
                 </Typography>
                 <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Full Name"
-                      value={user?.name || ""}
-                      disabled={!editing}
-                      variant="outlined"
-                      InputProps={{
-                        startAdornment: (
-                          <Person className="text-gray-400 mr-2" />
-                        ),
-                      }}
-                    />
-                  </Grid>
+                  {editing ? (
+                    <>
+                      <Grid item xs={6}>
+                        <TextField
+                          fullWidth
+                          label="First Name"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          variant="outlined"
+                          InputProps={{
+                            startAdornment: (
+                              <Person className="text-gray-400 mr-2" />
+                            ),
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <TextField
+                          fullWidth
+                          label="Last Name"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          variant="outlined"
+                          InputProps={{
+                            startAdornment: (
+                              <Person className="text-gray-400 mr-2" />
+                            ),
+                          }}
+                        />
+                      </Grid>
+                    </>
+                  ) : (
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Full Name"
+                        value={`${firstName} ${lastName}`}
+                        disabled={!editing}
+                        variant="outlined"
+                        InputProps={{
+                          startAdornment: (
+                            <Person className="text-gray-400 mr-2" />
+                          ),
+                        }}
+                      />
+                    </Grid>
+                  )}
                   <Grid item xs={12}>
                     <TextField
                       fullWidth
                       label="Email"
-                      value={user?.email || ""}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       disabled={!editing}
                       variant="outlined"
                       InputProps={{

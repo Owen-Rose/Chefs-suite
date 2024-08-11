@@ -72,11 +72,9 @@ async function updateUser(req: ExtendedNextApiRequest, res: NextApiResponse) {
 
     // Check if the current user is allowed to edit the user
     if (!canEditUser(currentUserRole, existingUser.role)) {
-      return res
-        .status(403)
-        .json({
-          error: `You don't have permission to edit ${existingUser.role} users`,
-        });
+      return res.status(403).json({
+        error: `You don't have permission to edit ${existingUser.role} users`,
+      });
     }
 
     // Check if the current user is allowed to assign the new role
@@ -131,11 +129,9 @@ async function deleteUser(req: ExtendedNextApiRequest, res: NextApiResponse) {
 
     // Check if the current user is allowed to delete the user
     if (!canEditUser(currentUserRole, userToDelete.role)) {
-      return res
-        .status(403)
-        .json({
-          error: `You don't have permission to delete ${userToDelete.role} users`,
-        });
+      return res.status(403).json({
+        error: `You don't have permission to delete ${userToDelete.role} users`,
+      });
     }
 
     const result = await db
@@ -167,7 +163,11 @@ function isAllowedToAssignRole(
     case UserRole.ADMIN:
       return true;
     case UserRole.CHEF:
-      return targetRole === UserRole.MANAGER || targetRole === UserRole.STAFF;
+      return (
+        targetRole === UserRole.CHEF ||
+        targetRole === UserRole.MANAGER ||
+        targetRole === UserRole.STAFF
+      );
     case UserRole.MANAGER:
       return targetRole === UserRole.STAFF;
     default:

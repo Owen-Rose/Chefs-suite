@@ -6,10 +6,12 @@ import {
   Checkbox,
   FormControlLabel,
   Link,
+  IconButton,
+  InputAdornment,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
-import { Login } from "@mui/icons-material";
+import { Login, Visibility, VisibilityOff } from "@mui/icons-material";
 
 const LoginPage = () => {
   const [email, setEmail] = useState(() =>
@@ -19,6 +21,7 @@ const LoginPage = () => {
   const [rememberMe, setRememberMe] = useState(
     () => typeof window !== "undefined" && !!localStorage.getItem("email")
   );
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
@@ -38,6 +41,16 @@ const LoginPage = () => {
     }
   };
 
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handleMouseDownPassword = (
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    event.preventDefault();
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
@@ -55,12 +68,26 @@ const LoginPage = () => {
           />
           <TextField
             label="Password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             variant="outlined"
             fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="mb-4"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={handleClickShowPassword}
+                    onMouseDown={handleMouseDownPassword}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           <div className="flex justify-between items-center mb-4">
             <FormControlLabel
