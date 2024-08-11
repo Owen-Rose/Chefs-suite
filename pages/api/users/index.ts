@@ -51,11 +51,9 @@ async function createUser(req: ExtendedNextApiRequest, res: NextApiResponse) {
 
     // Check if the current user is allowed to create a user with the given role
     if (!isAllowedToCreateRole(currentUserRole, role as UserRole)) {
-      return res
-        .status(403)
-        .json({
-          error: "You don't have permission to create a user with this role",
-        });
+      return res.status(403).json({
+        error: "You don't have permission to create a user with this role",
+      });
     }
 
     const existingUser = await db.collection("users").findOne({ email });
@@ -94,9 +92,13 @@ function isAllowedToCreateRole(
     case UserRole.ADMIN:
       return true;
     case UserRole.CHEF:
-      return targetRole === UserRole.MANAGER || targetRole === UserRole.STAFF;
+      return (
+        targetRole === UserRole.CHEF ||
+        targetRole === UserRole.MANAGER ||
+        targetRole === UserRole.STAFF
+      );
     case UserRole.MANAGER:
-      return targetRole === UserRole.STAFF;
+      return targetRole === UserRole.MANAGER || targetRole === UserRole.STAFF;
     default:
       return false;
   }
