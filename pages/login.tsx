@@ -8,6 +8,7 @@ import {
   Link,
   IconButton,
   InputAdornment,
+  Alert,
 } from "@mui/material";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
@@ -22,6 +23,7 @@ const LoginPage = () => {
     () => typeof window !== "undefined" && !!localStorage.getItem("email")
   );
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
   const { login } = useAuth();
   const router = useRouter();
 
@@ -37,7 +39,7 @@ const LoginPage = () => {
       router.push("/");
     } catch (error) {
       console.error("Failed to login", error);
-      // You might want to show an error message to the user here
+      setError("Invalid email or password. Please try again.");
     }
   };
 
@@ -57,6 +59,11 @@ const LoginPage = () => {
         <Typography variant="h4" className="text-center mb-6">
           Sign In
         </Typography>
+        {error && (
+          <Alert severity="error" className="mb-4">
+            {error}
+          </Alert>
+        )}
         <form onSubmit={handleLogin}>
           <TextField
             label="Email"
