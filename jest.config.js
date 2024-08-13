@@ -1,24 +1,25 @@
-const nextJest = require('next/jest')
+const nextJest = require("next/jest");
 
 const createJestConfig = nextJest({
-    dir: './',
-})
+  dir: "./",
+});
 
 const customJestConfig = {
-    setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-    testEnvironment: 'jest-environment-jsdom',
-    moduleDirectories: ['node_modules', '<rootDir>/'],
-    testPathIgnorePatterns: ['<rootDir>/cypress/'],
-    collectCoverage: true,
-    collectCoverageFrom: [
-        '**/*.{js,jsx,ts,tsx}',
-        '!**/*.d.ts',
-        '!**/node_modules/**',
-        '!<rootDir>/out/**',
-        '!<rootDir>/.next/**',
-        '!<rootDir>/*.config.js',
-        '!<rootDir>/coverage/**',
-    ],
-}
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+  testEnvironment: "jest-environment-jsdom",
+  testMatch: ["**/__tests__/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)"],
+  moduleDirectories: ["node_modules", "<rootDir>/"],
+  testPathIgnorePatterns: ["<rootDir>/cypress/"],
+  collectCoverage: true,
+  collectCoverageFrom: [
+    "**/*.{js,jsx,ts,tsx}",
+    "!**/*.d.ts",
+    "!**/node_modules/**",
+    "!<rootDir>/out/**",
+    "!<rootDir>/.next/**",
+    "!<rootDir>/*.config.js",
+    "!<rootDir>/coverage/**",
+  ],
+};
 
-module.exports = createJestConfig(customJestConfig)
+module.exports = createJestConfig(customJestConfig);
