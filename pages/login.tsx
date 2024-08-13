@@ -67,6 +67,7 @@ const LoginPage = () => {
         <form onSubmit={handleLogin}>
           <TextField
             label="Email"
+            name="email"
             variant="outlined"
             fullWidth
             value={email}
@@ -75,6 +76,7 @@ const LoginPage = () => {
           />
           <TextField
             label="Password"
+            name="password"
             type={showPassword ? "text" : "password"}
             variant="outlined"
             fullWidth

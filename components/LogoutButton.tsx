@@ -1,5 +1,5 @@
 import { Button } from "@mui/material";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/router";
 
 const LogoutButton = () => {
@@ -7,8 +7,13 @@ const LogoutButton = () => {
     const router = useRouter();
 
     const handleLogout = async () => {
-        await logout();
-        router.push('\login');
+        try {
+            await logout();
+            router.push('/login');  // Changed from '\login' to '/login'
+        } catch (error) {
+            console.error("Logout failed:", error);
+            // Handle logout error (e.g., show an error message to the user)
+        }
     };
 
     return (
