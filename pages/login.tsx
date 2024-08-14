@@ -9,7 +9,11 @@ import {
   IconButton,
   InputAdornment,
   Alert,
+  Container,
+  Box,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
 import { Login, Visibility, VisibilityOff } from "@mui/icons-material";
@@ -26,6 +30,8 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const { login } = useAuth();
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,35 +60,53 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <Typography variant="h4" className="text-center mb-6">
+    <Container component="main" maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        <Typography component="h1" variant="h5" sx={{ mb: 3 }}>
           Sign In
         </Typography>
         {error && (
-          <Alert severity="error" className="mb-4">
+          <Alert severity="error" sx={{ width: "100%", mb: 2 }}>
             {error}
           </Alert>
         )}
-        <form onSubmit={handleLogin}>
+        <Box
+          component="form"
+          onSubmit={handleLogin}
+          sx={{ mt: 1, width: "100%" }}
+        >
           <TextField
-            label="Email"
-            name="email"
-            variant="outlined"
+            margin="normal"
+            required
             fullWidth
+            id="email"
+            label="Email Address"
+            name="email"
+            autoComplete="email"
+            autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mb-4"
+            inputProps={{ style: { fontSize: isMobile ? 16 : 14 } }}
           />
           <TextField
-            label="Password"
-            name="password"
-            type={showPassword ? "text" : "password"}
-            variant="outlined"
+            margin="normal"
+            required
             fullWidth
+            name="password"
+            label="Password"
+            type={showPassword ? "text" : "password"}
+            id="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mb-4"
+            inputProps={{ style: { fontSize: isMobile ? 16 : 14 } }}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -98,34 +122,33 @@ const LoginPage = () => {
               ),
             }}
           />
-          <div className="flex justify-between items-center mb-4">
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  color="primary"
-                />
-              }
-              label="Remember Me"
-            />
-            <Link href="/forgot-password" className="text-blue-600">
-              Forgot Password?
-            </Link>
-          </div>
+          <FormControlLabel
+            control={
+              <Checkbox
+                value="remember"
+                color="primary"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+            }
+            label="Remember me"
+            sx={{ mt: 2, mb: 2 }}
+          />
           <Button
             type="submit"
-            variant="contained"
-            color="primary"
             fullWidth
+            variant="contained"
             startIcon={<Login />}
-            className="mb-4"
+            sx={{ mt: 3, mb: 2, py: 1.5 }}
           >
-            Login
+            Sign In
           </Button>
-        </form>
-      </div>
-    </div>
+          <Link href="/forgot-password" variant="body2">
+            Forgot password?
+          </Link>
+        </Box>
+      </Box>
+    </Container>
   );
 };
 

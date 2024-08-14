@@ -8,11 +8,9 @@ import { Recipe } from "@/types/Recipe";
 import RecipeDetailsPageMobile from "../../components/RecipeDetailsPageMobile";
 import RecipeDetailsPageDesktop from "../../components/RecipeDetailsPageDesktop";
 
-const RecipeDetailsPage: React.FC<{ recipe: Recipe | null }> = ({ recipe }) => {
+const RecipeDetailsPage: React.FC<{ recipe: Recipe }> = ({ recipe }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
-  if (!recipe) return <div>Recipe not found</div>;
 
   return isMobile ? (
     <RecipeDetailsPageMobile recipe={recipe} />
@@ -34,7 +32,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     recipe = await db.collection("recipes").findOne({ _id: new ObjectId(id) });
   } catch (error) {
     console.error("Error fetching recipe:", error);
-    recipe = null;
+    return {
+      notFound: true,
+    };
   }
 
   if (!recipe) {
