@@ -12,8 +12,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "cypress": "cypress open",
-    "cypress:headless": "cypress run",
-    "prepare": "husky"
+    "cypress:headless": "cypress run"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
