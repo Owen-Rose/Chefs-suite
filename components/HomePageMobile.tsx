@@ -13,8 +13,9 @@ import {
   ListItemIcon,
   Divider,
   CircularProgress,
+  ListItemButton
 } from "@mui/material";
-import { Search, Menu, Add, Home, Archive, Person } from "@mui/icons-material";
+import { Search, Menu, Add, Home, Archive, Person, People } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import { Recipe } from "@/types/Recipe";
 import { useAuth } from "../context/AuthContext";
@@ -71,26 +72,34 @@ const HomePageMobile: React.FC = () => {
   const renderDrawer = () => (
     <Box sx={{ width: 250 }} role="presentation">
       <List>
-        <ListItem button component={Link} href="/">
+        <ListItemButton component={Link} href="/">
           <ListItemIcon>
             <Home />
           </ListItemIcon>
           <ListItemText primary="Home" />
-        </ListItem>
+        </ListItemButton>
         {user && hasPermission(user.role, Permission.EDIT_RECIPES) && (
-          <ListItem button component={Link} href="/archives">
+          <ListItemButton component={Link} href="/archives">
             <ListItemIcon>
               <Archive />
             </ListItemIcon>
             <ListItemText primary="Archives" />
-          </ListItem>
+          </ListItemButton>
         )}
-        <ListItem button component={Link} href="/profile">
+        {user && hasPermission(user.role, Permission.VIEW_USERS) && (
+          <ListItemButton component={Link} href="/users">
+            <ListItemIcon>
+              <People />
+            </ListItemIcon>
+            <ListItemText primary="User Management" />
+          </ListItemButton>
+        )}
+        <ListItemButton component={Link} href="/profile">
           <ListItemIcon>
             <Person />
           </ListItemIcon>
           <ListItemText primary="Profile" />
-        </ListItem>
+        </ListItemButton>
       </List>
       <Divider />
       <List>
