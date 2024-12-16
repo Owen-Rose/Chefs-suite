@@ -21,6 +21,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
+        "./src/*",
         "./*"
       ]
     }
@@ -28,9 +29,15 @@
   "include": [
     "next-env.d.ts",
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    "scripts/**/*.ts"
   ],
   "exclude": [
     "node_modules"
-  ]
+  ],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  }
 }
