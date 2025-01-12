@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import { UserRole } from "./Roles";
 
 export interface User {
-  _id: ObjectId;
+  _id?: ObjectId;
   FirstName: string;
   LastName: string;
   email: string;
