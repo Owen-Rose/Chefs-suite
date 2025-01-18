@@ -2,8 +2,7 @@
 import { useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import ProtectedRoute from "../../components/ProtectedRoute";
-import UserListDesktop from "../../components/UserListDesktop";
-import UserListMobile from "../../components/UserListMobile";
+import UserList from "@/components/UserList";
 import { Permission } from "../../types/Permission";
 
 const UsersPage = () => {
@@ -12,7 +11,7 @@ const UsersPage = () => {
 
   return (
     <ProtectedRoute requiredPermission={Permission.VIEW_USERS}>
-      {isMobile ? <UserListMobile /> : <UserListDesktop />}
+      <UserList />
     </ProtectedRoute>
   );
 };

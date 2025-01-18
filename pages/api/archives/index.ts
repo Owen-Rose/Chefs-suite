@@ -7,7 +7,6 @@ import {
 } from "../../../lib/auth-middleware";
 import { Permission } from "../../../types/Permission";
 import { Archive } from "../../../types/Archive";
-import { UserRole } from "../../../types/Roles";
 
 async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
   const { method } = req;

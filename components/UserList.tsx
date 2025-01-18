@@ -273,7 +273,7 @@ const UserList: React.FC = () => {
             <TableBody>
               {filteredUsers.map((user) => (
                 <TableRow
-                  key={user._id.toString()}
+                  key={user._id!.toString()}
                   className="hover:bg-gray-50"
                 >
                   <TableCell>{`${user.FirstName} ${user.LastName}`}</TableCell>
@@ -309,7 +309,7 @@ const UserList: React.FC = () => {
                         canEditUser(user.role) && (
                           <Tooltip title="Delete User">
                             <IconButton
-                              onClick={() => handleDelete(user._id.toString())}
+                              onClick={() => handleDelete(user._id!.toString())}
                             >
                               <Delete />
                             </IconButton>

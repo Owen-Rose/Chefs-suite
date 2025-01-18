@@ -1,8 +1,7 @@
 import { useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import ProtectedRoute from "../../components/ProtectedRoute";
-import ArchiveManagementDesktop from "../../components/ArchiveManagementDesktop";
-import ArchiveManagementMobile from "../../components/ArchiveManagementMobile";
+import ArchiveManagement from "@/components/ArchiveManagement";
 import { Permission } from "../../types/Permission";
 
 const ArchivesPage = () => {
@@ -11,7 +10,7 @@ const ArchivesPage = () => {
 
   return (
     <ProtectedRoute requiredPermission={Permission.EDIT_RECIPES}>
-      {isMobile ? <ArchiveManagementMobile /> : <ArchiveManagementDesktop />}
+      <ArchiveManagement />
     </ProtectedRoute>
   );
 };
