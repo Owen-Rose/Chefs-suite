@@ -33,6 +33,8 @@ import { UserRole } from "../types/Roles";
 import { useAuth } from "../hooks/useAuth";
 import { Permission } from "../types/Permission";
 import { ObjectId } from "mongodb";
+import { Email } from "@mui/icons-material";
+import Link from "next/link";
 type FormUser = Omit<User, "_id" | "createdAt" | "updatedAt">;
 
 const UserList: React.FC = () => {
@@ -226,17 +228,30 @@ const UserList: React.FC = () => {
           >
             User Management
           </Typography>
-          {hasPermission(Permission.CREATE_USERS) && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<Add />}
-              onClick={() => handleOpenModal()}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              Add User
-            </Button>
-          )}
+          <div className="flex space-x-4">
+            {hasPermission(Permission.CREATE_USERS) && (
+              <Link href="/invitations" passHref>
+                <Button
+                  variant="outlined"
+                  startIcon={<Email />}
+                  className="border-primary text-primary hover:bg-primary hover:bg-opacity-10"
+                >
+                  Manage Invitations
+                </Button>
+              </Link>
+            )}
+            {hasPermission(Permission.CREATE_USERS) && (
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Add />}
+                onClick={() => handleOpenModal()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Add User
+              </Button>
+            )}
+          </div>
         </div>
 
         <Paper elevation={3} className="p-6 mb-8">

@@ -14,7 +14,12 @@ const config: Config = {
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
       colors: {
-        primary: "#1E3A8A", // Dark Blue
+        primary: {
+          main: '#1E3A8A', // Your existing primary blue
+          light: '#3B82F6',
+          lighter: '#EFF6FF', // Very light blue for backgrounds
+          dark: '#1E40AF',
+        },
         secondary: "#10B981", // Green
         accent: "#F59E0B", // Orange
       },

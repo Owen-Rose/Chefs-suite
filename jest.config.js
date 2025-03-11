@@ -51,6 +51,10 @@ const customJestConfig = {
         '<rootDir>/node_modules/',
     ],
 
+    transformIgnorePatterns: [
+        '/node_modules/(?!(next-auth|@next-auth|jose|openid-client)/)'
+    ],
+
     // If you use path aliases in tsconfig.json (e.g., @/components), map them here
     // moduleNameMapper: {
     //   '^@/(.*)$': '<rootDir>/$1',
