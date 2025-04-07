@@ -18,6 +18,9 @@ export interface Invitation {
     invitedBy: ObjectId;
     createdAt: Date;
     completedAt?: Date;
+    emailSent?: boolean;
+    emailSentAt?: Date;
+    emailError?: string;
 }
 
 export interface CreateInvitationDto {

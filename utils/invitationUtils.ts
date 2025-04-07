@@ -11,12 +11,13 @@ export type CompleteInvitation = Invitation;
 
 export class InvitationUtils {
     private static EXPIRATION_DAYS = 7;
+    private static TOKEN_BYTES = 48;
 
     /**
      * Generates a secure random token for invitations
      */
     static generateToken(): string {
-        return crypto.randomBytes(32).toString('hex');
+        return crypto.randomBytes(this.TOKEN_BYTES).toString('hex');
     }
 
     /**
@@ -34,7 +35,8 @@ export class InvitationUtils {
             status: InvitationStatus.PENDING,
             expiresAt: expirationDate,
             invitedBy,
-            createdAt: new Date()
+            createdAt: new Date(),
+            emailSent: false
         };
     }
 
@@ -52,7 +54,11 @@ export class InvitationUtils {
      * Generates the invitation magic link URL
      */
     static generateMagicLink(token: string, baseUrl: string): string {
-        return `${baseUrl}/register?token=${token}`;
+        const baseUrlWithoutTrailingSlash = baseUrl.endsWith('/')
+            ? baseUrl.slice(0, -1)
+            : baseUrl;
+
+        return `${baseUrlWithoutTrailingSlash}/register?token=${token}`;
     }
 }
 

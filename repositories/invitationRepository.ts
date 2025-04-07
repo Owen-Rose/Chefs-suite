@@ -16,6 +16,13 @@ export class InvitationRepository {
         });
     }
 
+    async findById(id: string): Promise<Invitation | null> {
+        if (!ObjectId.isValid(id)) {
+            return null;
+        }
+        return await this.collection.findOne({ _id: new ObjectId(id) });
+    }
+
     async create(invitation: Omit<Invitation, "_id">): Promise<Invitation> {
         const result = await this.collection.insertOne(invitation as any);
         return { ...invitation, _id: result.insertedId };
@@ -33,6 +40,30 @@ export class InvitationRepository {
 
         const result = await this.collection.updateOne(
             { token },
+            { $set: updateData }
+        );
+
+        return result.modifiedCount > 0;
+    }
+
+    async updateEmailStatus(
+        id: ObjectId | string,
+        emailSent: boolean,
+        emailError?: string
+    ): Promise<boolean> {
+        const objectId = typeof id === 'string' ? new ObjectId(id) : id;
+
+        const updateData: any = {
+            emailSent,
+            emailSentAt: emailSent ? new Date() : undefined
+        };
+
+        if (emailError) {
+            updateData.emailError = emailError;
+        }
+
+        const result = await this.collection.updateOne(
+            { _id: objectId },
             { $set: updateData }
         );
 

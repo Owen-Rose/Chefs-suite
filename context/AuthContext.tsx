@@ -26,11 +26,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const user: SafeUser | null = session?.user
     ? {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        role: session.user.role as UserRole,
-      }
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      role: session.user.role as UserRole,
+    }
     : null;
 
   const login = async (email: string, password: string) => {

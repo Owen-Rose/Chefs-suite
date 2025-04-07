@@ -8,6 +8,7 @@ import {
 import { Permission } from "../../../types/Permission";
 import { InvitationStatus } from "../../../types/Invitation";
 import { InvitationService } from "../../../services/invitationService";
+import { createMailService } from "@/services/email/email-service-factory";
 import { UserRole } from "../../../types/Roles";
 
 // Extend the user type to include hasPermission

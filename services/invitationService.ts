@@ -1,3 +1,5 @@
+import { EmailService } from "./email/types";
+import { generateInvitationEmail } from "./email/templates/invitation-email";
 import { ClientSession, Collection, ObjectId } from "mongodb";
 import { hash } from "bcryptjs";
 import { InvitationRepository } from "../repositories/invitationRepository";
@@ -10,15 +12,25 @@ import {
     CompleteInvitationDto
 } from "../types/Invitation";
 import { User } from "../types/User";
+import { logger } from "@/utils/logger";
 
 export class InvitationService {
     private repository: InvitationRepository;
+    private emailService: EmailService;
+    private siteName: string;
 
-    constructor(invitationsCollection: Collection<Invitation>) {
+    constructor(invitationsCollection: Collection<Invitation>, emailService: EmailService, siteName: string = 'Recipe Management System') {
         this.repository = new InvitationRepository(invitationsCollection);
+        this.emailService = emailService;
+        this.siteName = siteName;
     }
 
     async createInvitation(dto: CreateInvitationDto): Promise<Invitation> {
+
+        if (!this.isValidEmail(dto.email)) {
+            throw new Error('Invalid email format');
+        }
+
         // Check for existing pending invitation
         const existingInvitation = await this.repository.findPendingByEmail(dto.email);
 
@@ -34,7 +46,90 @@ export class InvitationService {
         );
 
         // Save to database
-        return await this.repository.create(invitation);
+        const savedInvitation = await this.repository.create(invitation);
+
+        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+
+        await this.sendInvitationEmail(savedInvitation, baseUrl);
+
+        return savedInvitation;
+    }
+
+    async sendInvitationEmail(invitation: Invitation, baseUrl: string): Promise<boolean> {
+        try {
+            // Generate magic link URL
+            const invitationLink = InvitationUtils.generateMagicLink(invitation.token, baseUrl);
+
+            // Format the role for better readability
+            const formattedRole = invitation.role.replace('_', ' ').toLowerCase()
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+
+            // Create email content
+            const emailContext = {
+                recipientEmail: invitation.email,
+                invitationLink,
+                role: formattedRole,
+                expiryDate: invitation.expiresAt,
+                siteName: this.siteName
+            };
+
+            const { subject, html } = generateInvitationEmail(emailContext);
+
+            // Send email
+            const result = await this.emailService.sendEmail({
+                to: invitation.email,
+                subject,
+                html
+            });
+
+            // Update invitation with email status
+            await this.repository.updateEmailStatus(
+                invitation._id!,
+                result.success,
+                result.success ? undefined : String(result.error)
+            );
+
+            return result.success;
+        } catch (error) {
+            logger.error('Failed to send invitation email', {
+                error: error instanceof Error ? error.message : String(error),
+                invitationId: invitation._id?.toString(),
+                email: invitation.email
+            });
+
+            // Update invitation with error status
+            if (invitation._id) {
+                await this.repository.updateEmailStatus(
+                    invitation._id,
+                    false,
+                    error instanceof Error ? error.message : String(error)
+                );
+            }
+
+            return false;
+        }
+    }
+
+    async resendInvitationEmail(invitationId: string, baseUrl: string): Promise<boolean> {
+        const invitation = await this.repository.findById(invitationId);
+
+        if (!invitation) {
+            throw new Error(INVITATION_ERRORS.NOT_FOUND);
+        }
+
+        if (invitation.status !== InvitationStatus.PENDING) {
+            throw new Error(INVITATION_ERRORS.ALREADY_COMPLETED);
+        }
+
+        return await this.sendInvitationEmail(invitation, baseUrl);
+    }
+
+    // Helper to validate email format
+    private isValidEmail(email: string): boolean {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
     }
 
     async verifyInvitation(token: string): Promise<VerifyInvitationResult> {
