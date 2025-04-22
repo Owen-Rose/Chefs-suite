@@ -28,7 +28,8 @@ async function baseHandler(req: AuthenticatedRequest, res: NextApiResponse) {
 
     try {
         const { invitations } = await connectToDatabase();
-        const invitationService = new InvitationService(invitations);
+        const emailService = createMailService();
+        const invitationService = new InvitationService(invitations, emailService);
 
         switch (method) {
             case "GET":

@@ -19,4 +19,6 @@ export interface Recipe {
   foodCost?: number;
   archiveId?: ObjectId | null;
   archiveDate?: Date | null;
+  importSource?: string;
+  importedAt?: Date;
 }

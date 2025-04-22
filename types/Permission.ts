@@ -12,6 +12,7 @@ export enum Permission {
   EDIT_USERS = "EDIT_USERS",
   DELETE_USERS = "DELETE_USERS",
   MANAGE_ROLES = "MANAGE_ROLES",
+  IMPORT_RECIPES = 'import_recipes',
 }
 
 export const RolePermissions: Record<UserRole, Permission[]> = {

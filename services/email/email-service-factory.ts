@@ -1,17 +1,17 @@
 import { EmailService } from "./types";
 import { MailgunEmailService } from "./mailgun-email-service";
-import { logger } from "@/utils/logger";
+import { ResendEmailService } from "./importAdapters/resendEmailService";
+import { Logger } from "@/utils/logger";
 
 export function createMailService(): EmailService {
-    const apiKey = process.env.MAILGUN_API_KEY;
-    const domain = process.env.MAILGUN_DOMAIN;
+    const resendApiKey = process.env.RESEND_API_KEY;
     const fromEmail = process.env.EMAIL_FROM;
 
-    if (!apiKey || !domain || !fromEmail) {
-        logger.error('Missing required environment variables for email service');
-        throw new Error('Email service configuration is incomplete. Check environment variables.');
-
+    if (resendApiKey && fromEmail) {
+        return new ResendEmailService(resendApiKey, fromEmail);
     }
 
-    return new MailgunEmailService(apiKey, domain, fromEmail);
+
+    Logger.error('Missing required environment variables for email service');
+    throw new Error('Email service configuration is incomplete. Check environment variables.');
 }

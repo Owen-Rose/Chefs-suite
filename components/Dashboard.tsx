@@ -38,6 +38,7 @@ import {
     FileText,
     Calendar,
     Users,
+    Mail,
     LayoutGrid,
     Settings,
     Bell,
@@ -58,6 +59,7 @@ import {
     SlidersHorizontal,
     Star,
     StarHalf,
+    Upload,
 } from "lucide-react";
 
 /**
@@ -284,10 +286,41 @@ const CommercialKitchenDashboard: React.FC = () => {
                         Production Calendar
                     </Button>
 
+                    {/* Add this User Management button */}
+                    <ProtectedComponent requiredPermission={Permission.CREATE_USERS}>
+                        <Button variant="ghost" className="w-full justify-start mb-1 font-normal" asChild>
+                            <Link href="/users">
+                                <Users className="h-4 w-4 mr-2" />
+                                User Management
+                            </Link>
+                        </Button>
+                    </ProtectedComponent>
+
+                    {/* Add this Invitations button */}
+                    <ProtectedComponent requiredPermission={Permission.CREATE_USERS}>
+                        <Button variant="ghost" className="w-full justify-start mb-1 font-normal" asChild>
+                            <Link href="/invitations">
+                                <Mail className="h-4 w-4 mr-2" />
+                                Invitations
+                            </Link>
+                        </Button>
+                    </ProtectedComponent>
+
                     <Button variant="ghost" className="w-full justify-start mb-1 font-normal">
                         <Printer className="h-4 w-4 mr-2" />
                         Print Queue
                     </Button>
+
+                    // In your navigation component
+                    <ProtectedComponent requiredPermission={Permission.IMPORT_RECIPES}>
+                        <Link href="/recipes/import">
+                            <Button variant="ghost">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Import Recipes
+                            </Button>
+                        </Link>
+                    </ProtectedComponent>
+
 
                     <Button variant="ghost" className="w-full justify-start mb-1 font-normal">
                         <Settings className="h-4 w-4 mr-2" />
