@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongodb';
+
 export class FileUtils {
     private static MAX_FILE_SIZE_MB = 5; // 5MB limit
     private static ALLOWED_EXTENSIONS = ['.csv', '.json']
@@ -32,5 +34,14 @@ export class FileUtils {
      */
     static sanitizeFileName(fileName: string): string {
         return fileName.replace(/[^\w\s.-]/gi, '')
+    }
+}
+
+export function toObjectId(id: string | undefined | null): ObjectId | undefined {
+    if (!id || typeof id !== 'string') return undefined;
+    try {
+        return new ObjectId(id);
+    } catch {
+        return undefined;
     }
 }

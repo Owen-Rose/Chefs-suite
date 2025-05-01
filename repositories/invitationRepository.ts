@@ -1,5 +1,6 @@
-import { Collection, ObjectId } from "mongodb";
-import { Invitation, InvitationStatus } from "../types/Invitation";
+import { Collection } from "mongodb";
+import { toObjectId } from "@/utils/fileUtils";
+import { Invitation, InvitationStatus } from "@/domain/auth/invitation";
 
 export class InvitationRepository {
     constructor(private collection: Collection<Invitation>) { }
@@ -17,10 +18,11 @@ export class InvitationRepository {
     }
 
     async findById(id: string): Promise<Invitation | null> {
-        if (!ObjectId.isValid(id)) {
+        const objectId = toObjectId(id);
+        if (!objectId) {
             return null;
         }
-        return await this.collection.findOne({ _id: new ObjectId(id) });
+        return await this.collection.findOne({ _id: objectId });
     }
 
     async create(invitation: Omit<Invitation, "_id">): Promise<Invitation> {
@@ -47,11 +49,12 @@ export class InvitationRepository {
     }
 
     async updateEmailStatus(
-        id: ObjectId | string,
+        id: string,
         emailSent: boolean,
         emailError?: string
     ): Promise<boolean> {
-        const objectId = typeof id === 'string' ? new ObjectId(id) : id;
+        const objectId = toObjectId(id);
+        if (!objectId) return false;
 
         const updateData: any = {
             emailSent,

@@ -1,10 +1,11 @@
-import { Recipe } from '../types/Recipe';
+import { Recipe } from '@/domain/inventory/recipe';
 import { ObjectId } from 'mongodb';
 import { CsvParserService, RawRecipeData } from './csvParserService';
 import { RecipeNormalizerService } from './recipeNormalizerService';
 import { Logger } from '../utils/logger';
 import fs from 'fs';
 import readline from 'readline';
+import { toObjectId } from '@/utils/fileUtils';
 
 export class RecipeImportService {
     static async importFromCsv(
@@ -26,6 +27,8 @@ export class RecipeImportService {
                 // Update to match your Recipe type
                 const newRecipe: Partial<Recipe> = {
                     ...recipe,
+                    _id: recipe._id ? toObjectId(recipe._id as string) : undefined,
+                    originalId: recipe.originalId ? toObjectId(recipe.originalId as string) : undefined,
                     createdDate: new Date().toISOString(),
                     importSource: 'csv',
                     importedAt: new Date()
@@ -110,6 +113,8 @@ export class RecipeImportService {
                     try {
                         const newRecipe: Partial<Recipe> = {
                             ...recipe,
+                            _id: recipe._id ? toObjectId(recipe._id as string) : undefined,
+                            originalId: recipe.originalId ? toObjectId(recipe.originalId as string) : undefined,
                             createdDate: new Date().toISOString(),
                             importSource: 'csv',
                             importedAt: new Date()
@@ -145,6 +150,8 @@ export class RecipeImportService {
                 try {
                     const newRecipe: Partial<Recipe> = {
                         ...recipe,
+                        _id: recipe._id ? toObjectId(recipe._id as string) : undefined,
+                        originalId: recipe.originalId ? toObjectId(recipe.originalId as string) : undefined,
                         createdDate: new Date().toISOString(),
                         importSource: 'csv',
                         importedAt: new Date()

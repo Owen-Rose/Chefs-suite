@@ -1,7 +1,7 @@
 import crypto from 'crypto';
-import { Invitation, InvitationStatus } from '@/types/Invitation';
+import { Invitation, InvitationStatus } from '@/domain/auth/invitation';
 import { ObjectId } from 'mongodb';
-import { UserRole } from '@/types/Roles';
+import { UserRole } from '@/domain/auth/roles';
 
 // Updated NewInvitation type for better clarity and correctness
 export type NewInvitation = Omit<Invitation, '_id'>;

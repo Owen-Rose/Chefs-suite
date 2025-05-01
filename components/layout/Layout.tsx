@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuth as useAuthHook } from "@/hooks/useAuth"; // For hasPermission
 import { useAuth as useAuthContext } from "@/context/AuthContext"; // For logout
-import { Permission } from "@/types/Permission";
+import { Permission } from "@/domain/auth/permission";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +29,7 @@ import {
     Plus,
     BookOpen
 } from "lucide-react";
-import ProtectedComponent from "@/components/ProtectedComponent";
+import ProtectedComponent from "@/components/ui/ProtectedComponent";
 
 interface LayoutProps {
     children: ReactNode;
