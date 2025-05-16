@@ -1,7 +1,8 @@
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useState, useContext } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthContext } from "@/context/AuthContext";
 import { Permission } from "@/types/Permission";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,8 @@ import {
   Bell,
   LogOut,
   Plus,
-  MenuBook
 } from "lucide-react";
+import { MenuBook } from "@/components/ui/custom-icons";
 import ProtectedComponent from "@/components/ProtectedComponent";
 
 interface LayoutProps {
@@ -35,7 +36,9 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user, logout } = useAuth();
+  const authContext = useContext(AuthContext);
+  const { user } = useAuth();
+  const logout = authContext?.logout;
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -51,8 +54,10 @@ export default function Layout({ children }: LayoutProps) {
 
   const handleLogout = async () => {
     try {
-      await logout();
-      router.push("/login");
+      if (logout) {
+        await logout();
+        router.push("/login");
+      }
     } catch (error) {
       console.error("Logout failed:", error);
     }

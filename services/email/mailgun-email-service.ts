@@ -1,7 +1,7 @@
 import FormData from "form-data";
 import Mailgun from "mailgun.js";
 import { EmailOptions, EmailResult, EmailService } from "./types";
-import { logger } from "@/utils/logger";
+import { Logger } from "@/utils/logger";
 
 export class MailgunEmailService implements EmailService {
     private client: any;
@@ -20,13 +20,13 @@ export class MailgunEmailService implements EmailService {
 
         this.domain = domain;
         this.defaultFrom = defaultFrom;
-        logger.info(`MailgunEmailService initialized with domain: ${domain}`);
+        Logger.info(`MailgunEmailService initialized with domain: ${domain}`);
     }
 
     async sendEmail(options: EmailOptions): Promise<EmailResult> {
         try {
             // Log attempt to send an email (without sensitive data)
-            logger.info(`Sending email to ${options.to}`);
+            Logger.info(`Sending email to ${options.to}`);
 
             // Prepare the message data
             const messageData = {
@@ -40,7 +40,7 @@ export class MailgunEmailService implements EmailService {
             // Send the email via Mailgun
             const response = await this.client.messages.create(this.domain, messageData);
 
-            logger.info(`Email sent successfully to ${options.to}, messageId: ${response.id}`);
+            Logger.info(`Email sent successfully to ${options.to}, messageId: ${response.id}`);
 
             return {
                 success: true,
@@ -48,7 +48,7 @@ export class MailgunEmailService implements EmailService {
             };
         } catch (error) {
             // Log the error (for monitoring and debugging)
-            logger.error('Failed to send email via Mailgun', {
+            Logger.error('Failed to send email via Mailgun', {
                 error: error instanceof Error ? error.message : String(error),
                 to: options.to,
                 subject: options.subject

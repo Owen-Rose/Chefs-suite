@@ -13,6 +13,7 @@ import { UserRole } from "../../types/Roles";
 import { ObjectId } from "mongodb";
 import { InvitationUtils, INVITATION_ERRORS } from "../../utils/invitationUtils";
 import { compare } from "bcryptjs";
+import { MockEmailService } from "../../__mocks__/services/email/mockEmailService";
 
 // Mock invitationUtils to control token generation
 jest.mock("../../utils/invitationUtils", () => {
@@ -53,6 +54,7 @@ describe("InvitationService", () => {
     let invitationsCollection: Collection<Invitation>;
     let usersCollection: Collection<User>;
     let invitationService: InvitationService;
+    let mockEmailService: MockEmailService;
 
     beforeAll(async () => {
         mongoServer = await MongoMemoryServer.create();
@@ -69,7 +71,8 @@ describe("InvitationService", () => {
         await invitationsCollection.createIndex({ email: 1 });
         await invitationsCollection.createIndex({ token: 1 }, { unique: true });
 
-        invitationService = new InvitationService(invitationsCollection);
+        mockEmailService = new MockEmailService();
+        invitationService = new InvitationService(invitationsCollection, mockEmailService);
     });
 
     afterAll(async () => {

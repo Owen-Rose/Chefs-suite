@@ -12,7 +12,7 @@ import {
     CompleteInvitationDto
 } from "../types/Invitation";
 import { User } from "../types/User";
-import { logger } from "@/utils/logger";
+import { Logger } from "../utils/logger";
 
 export class InvitationService {
     private repository: InvitationRepository;
@@ -93,7 +93,7 @@ export class InvitationService {
 
             return result.success;
         } catch (error) {
-            logger.error('Failed to send invitation email', {
+            Logger.error('Failed to send invitation email', {
                 error: error instanceof Error ? error.message : String(error),
                 invitationId: invitation._id?.toString(),
                 email: invitation.email

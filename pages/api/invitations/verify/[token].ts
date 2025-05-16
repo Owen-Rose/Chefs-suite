@@ -2,6 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "@/lib/mongodb";
 import { InvitationService } from "@/services/invitationService";
+import { createMailService } from "@/services/email/email-service-factory";
 
 export default async function handler(
     req: NextApiRequest,
@@ -20,7 +21,8 @@ export default async function handler(
         }
 
         const { invitations } = await connectToDatabase();
-        const invitationService = new InvitationService(invitations);
+        const emailService = createMailService();
+        const invitationService = new InvitationService(invitations, emailService);
 
         const verifyResult = await invitationService.verifyInvitation(token);
 

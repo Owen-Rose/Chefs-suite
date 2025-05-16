@@ -20,7 +20,14 @@ export class RecipeNormalizerService {
                 }
 
                 // Parse ingredients from string to structured data
-                const ingredients = this.parseIngredients(rawRecipe.ingredients)
+                // Transform parsed ingredients to match Ingredient interface
+                const rawIngredients = this.parseIngredients(rawRecipe.ingredients);
+                const ingredients = rawIngredients.map((ing, index) => ({
+                    id: ing.id || index,
+                    productName: ing.productName || ing.name,
+                    quantity: parseFloat(ing.quantity) || 0,
+                    unit: ing.unit
+                }))
 
                 // Parse instructions from string to structured data
                 const instructions = this.parseInstructions(rawRecipe.instructions)
@@ -34,7 +41,7 @@ export class RecipeNormalizerService {
                     version: '1.0',
                     station: rawRecipe.station?.trim() || 'default',
                     batchNumber: parseInt(rawRecipe.batchNumber as string, 10) || 1,
-                    equipment: rawRecipe.equipment ? rawRecipe.equipment.split(',').map(e => e.trim()) : [],
+                    equipment: rawRecipe.equipment ? rawRecipe.equipment.split(',').map((e: string) => e.trim()) : [],
                     yield: rawRecipe.servings?.toString() || '1',
                     portionSize: rawRecipe.portionSize?.toString() || '1',
                     portionsPerRecipe: rawRecipe.portionsPerRecipe?.toString() || '1',
@@ -58,22 +65,24 @@ export class RecipeNormalizerService {
      * Parse ingredients string into structured data
      * Assumes format like "1 cup flour, 2 tbsp sugar"
      */
-    private static parseIngredients(ingredientsText: string): any[] {
+    private static parseIngredients(ingredientsText: string): { name: string; quantity: string; unit: string; id?: number; productName?: string }[] {
         // Split by newlines or commas
         return ingredientsText.split(/[\r\n]+|,/)
-            .map(item => item.trim())
-            .filter(item => item)
-            .map(item => {
+            .map((item: string) => item.trim())
+            .filter((item: string) => item)
+            .map((item: string) => {
                 // Simple parsing example, adjust based on your needs
                 const match = item.match(/^([\d.\/]+)?\s*(\w+)?\s+(.+)$/)
                 if (match) {
                     return {
                         quantity: match[1] || '',
                         unit: match[2] || '',
-                        name: match[3] || item
+                        name: match[3] || item,
+                        id: 0,
+                        productName: match[3] || item
                     }
                 }
-                return { name: item, quantity: '', unit: '' }
+                return { name: item, quantity: '', unit: '', id: 0, productName: item }
             })
     }
 
@@ -83,7 +92,7 @@ export class RecipeNormalizerService {
     private static parseInstructions(instructionsText: string): string[] {
         // Split by line breaks or numbered items
         return instructionsText.split(/[\r\n]+|(?:\d+\.\s*)/)
-            .map(item => item.trim())
-            .filter(item => item)
+            .map((item: string) => item.trim())
+            .filter((item: string) => item)
     }
 }

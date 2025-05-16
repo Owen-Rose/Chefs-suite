@@ -23,12 +23,20 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "types": ["node", "jest", "@testing-library/jest-dom"]
   },
   "include": [
-    "next-env.d.ts",
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    "types/*.d.ts"
   ],
   "exclude": [
     "node_modules"

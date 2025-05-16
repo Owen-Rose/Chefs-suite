@@ -234,11 +234,8 @@ const ArchiveManagement: React.FC = () => {
   };
 
   // Handle select all recipes
-  const handleSelectAllRecipes = (e: React.ChangeEvent<HTMLInputElement> | boolean) => {
-    // This function handles both checkbox changes and direct boolean value
-    const isChecked = typeof e === 'boolean' ? e : e.target.checked;
-
-    if (isChecked) {
+  const handleSelectAllRecipes = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
       setSelectedRecipes(filteredArchivedRecipes.map((recipe) => recipe.originalId!.toString()));
     } else {
       setSelectedRecipes([]);

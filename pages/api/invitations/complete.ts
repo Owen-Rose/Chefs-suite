@@ -3,6 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { InvitationService } from "../../../services/invitationService";
 import { CompleteInvitationDto } from "../../../types/Invitation";
+import { createMailService } from "../../../services/email/email-service-factory";
 
 export default async function handler(
     req: NextApiRequest,
@@ -21,7 +22,8 @@ export default async function handler(
         }
 
         const { invitations, users, client } = await connectToDatabase();
-        const invitationService = new InvitationService(invitations);
+        const emailService = createMailService();
+        const invitationService = new InvitationService(invitations, emailService);
 
         // Start a session for the transaction
         const session = client.startSession();
