@@ -2,6 +2,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { BaseRepository } from "./base/BaseRepository";
 import { User } from "@/types/User";
 import { MongoUserRepository } from "./implementations/MongoUserRepository";
+import { ensureServicesInitialized, getRepository, RepositoryTokens } from "@/lib/services";
 
 /**
  * Singleton instance of the user repository
@@ -15,11 +16,19 @@ let userRepository: BaseRepository<User> | null = null;
  * @returns A promise resolving to the user repository instance
  */
 export async function getUserRepository(): Promise<BaseRepository<User>> {
-  if (!userRepository) {
-    const { users } = await connectToDatabase();
-    userRepository = new MongoUserRepository(users);
+  // Legacy method to maintain compatibility
+  try {
+    // Try to get repository from the container first
+    await ensureServicesInitialized();
+    return getRepository(RepositoryTokens.UserRepository);
+  } catch (error) {
+    // Fall back to the old method
+    if (!userRepository) {
+      const { users } = await connectToDatabase();
+      userRepository = new MongoUserRepository(users);
+    }
+    return userRepository;
   }
-  return userRepository;
 }
 
 /**

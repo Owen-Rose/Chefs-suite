@@ -2,7 +2,7 @@
 
 ## Overall Progress
 
-- Phase 1: Foundational Improvements (3/18 tasks complete)
+- Phase 1: Foundational Improvements (7/18 tasks complete)
 - Phase 2: Architecture Enhancement (0/16 tasks complete)
 - Phase 3: App Router Migration (0/4 tasks complete)
 
@@ -19,10 +19,10 @@
 | 1.1 | Create Base Repository Interface | ✅ Completed | Claude | | 2025-05-16 |
 | 1.2 | Implement Recipe Repository | ✅ Completed | Claude | | 2025-05-20 |
 | 1.3 | Add User Repository | ✅ Completed | Claude | | 2025-05-21 |
-| 1.4 | Add Archive Repository | 🔄 Not Started | | | |
-| 1.5 | Update Recipe API Endpoints | 🔄 Not Started | | | |
-| 1.6 | Update User API Endpoints | 🔄 Not Started | | | |
-| 1.7 | Implement Dependency Injection Pattern | 🔄 Not Started | | | |
+| 1.4 | Add Archive Repository | ✅ Completed | Claude | | 2025-05-21 |
+| 1.5 | Update Recipe API Endpoints | ✅ Completed | Claude | | 2025-05-21 |
+| 1.6 | Update User API Endpoints | ✅ Completed  | Claude | | 2025-05-21 |
+| 1.7 | Implement Dependency Injection Pattern | ✅ Completed | Claude | | 2025-05-21 |
 | 2.1 | Create Custom Error Classes | 🔄 Not Started | | | |
 | 2.2 | Implement Error Handling Middleware | 🔄 Not Started | | | |
 | 2.3 | Integrate Structured Logging | 🔄 Not Started | | | |
