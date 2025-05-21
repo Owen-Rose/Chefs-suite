@@ -4,19 +4,22 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../pages/api/auth/[...nextauth]";
 import { Permission, hasPermission } from "../types/Permission";
 import { UserRole } from "../types/Roles";
-import { RequestWithServices } from "./withServices";
+import { RequestWithServices, withServices } from "./withServices";
 
-// Update the interface to include the hasPermission method
+/**
+ * Request interface for authenticated requests
+ */
 export interface AuthenticatedRequest extends NextApiRequest {
   user?: {
     role: UserRole;
     id: string;
     hasPermission: (permission: Permission) => boolean;
-    // Add other user properties as needed
   };
 }
 
-// Combined type with both auth and services
+/**
+ * Combined interface for requests with both authentication and services
+ */
 export interface AuthenticatedRequestWithServices extends RequestWithServices {
   user?: {
     role: UserRole;
@@ -24,6 +27,12 @@ export interface AuthenticatedRequestWithServices extends RequestWithServices {
     hasPermission: (permission: Permission) => boolean;
   };
 }
+
+/**
+ * Alias for backward compatibility
+ * @deprecated Use AuthenticatedRequest instead
+ */
+export interface ExtendedNextApiRequest extends AuthenticatedRequest {}
 
 /**
  * Middleware to check authentication and authorization for API routes
@@ -76,9 +85,7 @@ export function withAuthAndServices(
   handler: (req: AuthenticatedRequestWithServices, res: NextApiResponse) => Promise<void> | void,
   requiredPermission: Permission
 ) {
-  // We need to cast types here because of TypeScript's limitations with middleware composition
-  const withServicesHandler = (req: AuthenticatedRequestWithServices, res: NextApiResponse) => handler(req, res);
-  
-  // Apply withApiAuth first, then the handler will get the enhanced request with services
-  return withApiAuth(withServicesHandler as NextApiHandler, requiredPermission);
+  // First apply withServices, then withApiAuth
+  const servicesHandler = withServices((req, res) => handler(req as AuthenticatedRequestWithServices, res));
+  return withApiAuth(servicesHandler, requiredPermission);
 }

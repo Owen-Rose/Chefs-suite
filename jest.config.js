@@ -52,7 +52,7 @@ const customJestConfig = {
     ],
 
     transformIgnorePatterns: [
-        '/node_modules/(?!(next-auth|@next-auth|jose|openid-client)/)'
+        '/node_modules/(?!(next-auth|@next-auth|jose|openid-client|@panva|cookie)/)'
     ],
 
     // If you use path aliases in tsconfig.json (e.g., @/components), map them here

@@ -12,6 +12,8 @@ import { ObjectId } from 'mongodb';
 import { MonitoringService } from '../../../services/monitoringService';
 import { Logger } from '../../../utils/logger';
 import { connectToDatabase } from '../../../lib/mongodb';
+import { getRecipeService } from '../../../services/recipeService';
+import { ValidationError } from '../../../errors/ValidationError';
 
 // Configure multer storage
 const storage = multer.memoryStorage();
@@ -72,7 +74,9 @@ apiRoute.post(async (req: ExtendedNextApiRequest, res: NextApiResponse) => {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
+        const recipeService = await getRecipeService();
         const adapter = ImportAdapterFactory.getAdapter(file.mimetype);
+        
         if (!adapter) {
             return res.status(400).json({
                 error: 'Unsupported file type. Supported types: CSV, JSON'
@@ -84,19 +88,22 @@ apiRoute.post(async (req: ExtendedNextApiRequest, res: NextApiResponse) => {
             return res.status(400).json({ error: fileValidation.error });
         }
 
+        // Parse recipes using the adapter
         const rawRecipes = await adapter.parseFile(file.buffer);
-        const { db } = await connectToDatabase();
-
+        
+        // Use the RecipeService to create the recipes
         const importResult = await RecipeImportService.importFromCsv(
             file.buffer.toString(),
             req.user!.id,
-            db
+            await connectToDatabase()
         );
 
         const importStatus = importResult.errors.length === 0
             ? ImportStatus.SUCCESS
             : (importResult.imported > 0 ? ImportStatus.PARTIAL : ImportStatus.FAILED);
 
+        // Record import log
+        const { db } = await connectToDatabase();
         const importLog: Omit<ImportLog, '_id'> = {
             userId: new ObjectId(req.user!.id),
             fileName: FileUtils.sanitizeFileName(file.originalname),
@@ -132,9 +139,11 @@ apiRoute.post(async (req: ExtendedNextApiRequest, res: NextApiResponse) => {
         });
     } catch (error) {
         Logger.error('Recipe import error:', { error });
-        return res.status(500).json({
-            error: error instanceof Error ? error.message : 'Failed to process import'
-        });
+        
+        const statusCode = error instanceof ValidationError ? 400 : 500;
+        const errorMessage = error instanceof Error ? error.message : 'Failed to process import';
+        
+        return res.status(statusCode).json({ error: errorMessage });
     }
 });
 

@@ -1,83 +1,115 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { ObjectId } from "mongodb";
-import { connectToDatabase } from "../../../lib/mongodb";
-import {
-  withApiAuth,
-  ExtendedNextApiRequest,
-} from "../../../lib/auth-middleware";
+import corsMiddleware, { runMiddleware } from "../../../lib/cors-middleware";
+import { withApiAuth } from "../../../lib/auth-middleware";
 import { Permission } from "../../../types/Permission";
-import { UserRole } from "../../../types/Roles";
+import { getRecipeService } from "../../../services/recipeService";
+import { getArchiveRepository } from "../../../repositories/archiveRepository";
+import { NotFoundError } from "../../../errors/NotFoundError";
+import { connectToDatabase } from "../../../lib/mongodb";
 
-async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
+  await runMiddleware(req, res, corsMiddleware);
+  
   if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method Not Allowed" });
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-
+  
   const { recipeIds, archiveId } = req.body;
-
-  if (
-    !recipeIds ||
-    !Array.isArray(recipeIds) ||
-    recipeIds.length === 0 ||
-    !archiveId
-  ) {
-    return res.status(400).json({ message: "Invalid request parameters" });
+  
+  if (!recipeIds || !Array.isArray(recipeIds) || recipeIds.length === 0) {
+    return res.status(400).json({ error: "Recipe IDs are required" });
   }
-
+  
+  if (!archiveId) {
+    return res.status(400).json({ error: "Archive ID is required" });
+  }
+  
+  if (!ObjectId.isValid(archiveId)) {
+    return res.status(400).json({ error: "Invalid archive ID" });
+  }
+  
   try {
-    const { db, client } = await connectToDatabase();
-
+    const recipeService = await getRecipeService();
+    const archiveRepository = await getArchiveRepository();
+    
+    // Check if archive exists
+    const archiveExists = await archiveRepository.exists(archiveId);
+    if (!archiveExists) {
+      return res.status(404).json({ error: "Archive not found" });
+    }
+    
+    // We need database transaction support for batch operations
+    const { client } = await connectToDatabase();
     const session = client.startSession();
-
+    
+    const results: Array<{id: string, success: boolean, error?: string}> = [];
+    let allSuccessful = true;
+    
     try {
       await session.withTransaction(async () => {
-        const recipes = await db
-          .collection("recipes")
-          .find({ _id: { $in: recipeIds.map((id) => new ObjectId(id)) } })
-          .toArray();
-
-        if (recipes.length !== recipeIds.length) {
-          throw new Error("One or more recipes not found");
+        const now = new Date();
+        
+        // Process each recipe
+        for (const recipeId of recipeIds) {
+          try {
+            // Get the recipe
+            const recipe = await recipeService.getRecipeById(recipeId);
+            
+            // Add recipe to archive
+            await archiveRepository.addRecipe(
+              archiveId,
+              {
+                ...recipe,
+                originalId: recipeId,
+                archivedDate: now
+              },
+              { session }
+            );
+            
+            // Update the recipe with archive information
+            await recipeService.updateRecipe(
+              recipeId,
+              {
+                archiveId: new ObjectId(archiveId),
+                archiveDate: now
+              },
+              { session }
+            );
+            
+            results.push({
+              id: recipeId,
+              success: true
+            });
+          } catch (error) {
+            console.error(`Failed to archive recipe ${recipeId}:`, error);
+            
+            results.push({
+              id: recipeId,
+              success: false,
+              error: error instanceof NotFoundError ? error.message : "Failed to archive recipe"
+            });
+            
+            allSuccessful = false;
+          }
         }
-
-        const archivedRecipes = recipes.map((recipe) => {
-          const { _id, ...recipeWithoutId } = recipe;
-          return {
-            ...recipeWithoutId,
-            archivedDate: new Date(),
-            originalId: _id,
-          };
-        });
-
-        await db
-          .collection("archives")
-          .updateOne(
-            { _id: new ObjectId(archiveId) },
-            { $push: { recipes: { $each: archivedRecipes } } } as any,
-            { session }
-          );
-
-        await db
-          .collection("recipes")
-          .deleteMany(
-            { _id: { $in: recipeIds.map((id) => new ObjectId(id)) } },
-            { session }
-          );
       });
-
-      res.status(200).json({ message: "Recipes archived successfully" });
+      
+      const statusCode = allSuccessful ? 200 : 207; // 207 for partial success
+      
+      res.status(statusCode).json({
+        message: allSuccessful ? "All recipes archived successfully" : "Some recipes could not be archived",
+        archiveId,
+        results
+      });
     } finally {
       await session.endSession();
     }
   } catch (error) {
-    console.error("Error archiving recipes:", error);
-    res.status(500).json({
-      message: "Internal Server Error",
-      error: (error as Error).message,
-    });
+    console.error("Failed to batch archive recipes:", error);
+    res.status(500).json({ error: "Failed to batch archive recipes" });
   }
 }
-
-// Only allow ADMIN, CHEF, and MANAGER roles to access this endpoint
 
 export default withApiAuth(handler, Permission.EDIT_RECIPES);

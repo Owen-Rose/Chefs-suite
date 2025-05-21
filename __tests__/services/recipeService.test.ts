@@ -1,10 +1,11 @@
 import { RecipeService } from '../../services/recipeService';
 import { NotFoundError } from '../../errors/NotFoundError';
 import { ValidationError } from '../../errors/ValidationError';
-import { mockRecipeRepository } from '../utils/mockFactory';
+import { mockRecipeRepository, createMockRecipe } from '../utils/mockFactory';
 import { ObjectId } from 'mongodb';
 import { Container } from '@/lib/container';
 import { RepositoryTokens, ServiceTokens } from '@/lib/services';
+import { Recipe } from '@/types/Recipe';
 
 // Mock the repository factory function
 jest.mock('../../repositories/recipeRepository', () => ({
@@ -33,38 +34,34 @@ jest.mock('../../utils/logger', () => ({
 
 describe('RecipeService', () => {
   const mockRecipes = [
-    {
-      _id: new ObjectId(),
+    createMockRecipe({
+      _id: new ObjectId().toString(),
       name: 'Chocolate Cake',
       ingredients: [
-        { name: 'Flour', quantity: '200', unit: 'g' },
-        { name: 'Sugar', quantity: '150', unit: 'g' },
-        { name: 'Chocolate', quantity: '100', unit: 'g' },
+        { id: 1, productName: 'Flour', name: 'Flour', quantity: 200, unit: 'g' },
+        { id: 2, productName: 'Sugar', name: 'Sugar', quantity: 150, unit: 'g' },
+        { id: 3, productName: 'Chocolate', name: 'Chocolate', quantity: 100, unit: 'g' },
       ],
       procedure: ['Mix dry ingredients', 'Add wet ingredients', 'Bake for 30 minutes'],
       prepTime: 20,
       cookTime: 30,
       servings: 8,
       createdBy: new ObjectId(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      _id: new ObjectId(),
+    }),
+    createMockRecipe({
+      _id: new ObjectId().toString(),
       name: 'Banana Bread',
       ingredients: [
-        { name: 'Flour', quantity: '250', unit: 'g' },
-        { name: 'Sugar', quantity: '100', unit: 'g' },
-        { name: 'Bananas', quantity: '3', unit: 'whole' },
+        { id: 1, productName: 'Flour', name: 'Flour', quantity: 250, unit: 'g' },
+        { id: 2, productName: 'Sugar', name: 'Sugar', quantity: 100, unit: 'g' },
+        { id: 3, productName: 'Bananas', name: 'Bananas', quantity: 3, unit: 'whole' },
       ],
       procedure: ['Mash bananas', 'Mix with dry ingredients', 'Bake for 45 minutes'],
       prepTime: 15,
       cookTime: 45,
       servings: 6,
       createdBy: new ObjectId(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
+    }),
   ];
 
   let repository: any;
@@ -80,8 +77,7 @@ describe('RecipeService', () => {
       const result = await service.getAllRecipes();
       
       expect(repository.findAll).toHaveBeenCalled();
-      expect(result.data).toEqual(mockRecipes);
-      expect(result.pagination).toBeDefined();
+      expect(result.items).toEqual(mockRecipes);
     });
   });
 
@@ -111,8 +107,7 @@ describe('RecipeService', () => {
         const result = await service.getAllRecipes();
         
         expect(repository.findAll).toHaveBeenCalled();
-        expect(result.data).toEqual(mockRecipes);
-        expect(result.pagination).toBeDefined();
+        expect(result.items).toEqual(mockRecipes);
       });
   
       it('should handle error when fetching recipes fails', async () => {
@@ -124,7 +119,7 @@ describe('RecipeService', () => {
   
     describe('getRecipeById', () => {
       it('should return a recipe when it exists', async () => {
-        const id = mockRecipes[0]._id.toString();
+        const id = mockRecipes[0]._id!.toString();
         const result = await service.getRecipeById(id);
         
         expect(repository.findById).toHaveBeenCalledWith(id, undefined);
@@ -140,39 +135,43 @@ describe('RecipeService', () => {
     });
   
     describe('createRecipe', () => {
-      const validRecipe = {
+      const validRecipe = createMockRecipe({
         name: 'New Recipe',
-        ingredients: [{ name: 'Ingredient', quantity: '100', unit: 'g' }],
+        ingredients: [{ id: 1, productName: 'Ingredient', quantity: 100, unit: 'g' }],
         procedure: ['Step 1'],
         prepTime: 10,
         cookTime: 20,
         servings: 4,
         createdBy: new ObjectId(),
-      };
+      });
   
       it('should create a recipe with valid data', async () => {
-        const result = await service.createRecipe(validRecipe);
+        const { _id, ...recipeData } = validRecipe;
+        const result = await service.createRecipe(recipeData);
         
-        expect(repository.create).toHaveBeenCalledWith(validRecipe, undefined);
+        expect(repository.create).toHaveBeenCalledWith(recipeData, undefined);
         expect(result).toBeDefined();
       });
   
       it('should throw ValidationError when recipe name is empty', async () => {
-        const invalidRecipe = { ...validRecipe, name: '' };
+        const { _id, ...recipeData } = validRecipe;
+        const invalidRecipe = { ...recipeData, name: '' };
         
         await expect(service.createRecipe(invalidRecipe)).rejects.toThrow(ValidationError);
         expect(repository.create).not.toHaveBeenCalled();
       });
   
       it('should throw ValidationError when ingredients are empty', async () => {
-        const invalidRecipe = { ...validRecipe, ingredients: [] };
+        const { _id, ...recipeData } = validRecipe;
+        const invalidRecipe = { ...recipeData, ingredients: [] };
         
         await expect(service.createRecipe(invalidRecipe)).rejects.toThrow(ValidationError);
         expect(repository.create).not.toHaveBeenCalled();
       });
   
       it('should throw ValidationError when procedure is empty', async () => {
-        const invalidRecipe = { ...validRecipe, procedure: [] };
+        const { _id, ...recipeData } = validRecipe;
+        const invalidRecipe = { ...recipeData, procedure: [] };
         
         await expect(service.createRecipe(invalidRecipe)).rejects.toThrow(ValidationError);
         expect(repository.create).not.toHaveBeenCalled();
@@ -180,7 +179,7 @@ describe('RecipeService', () => {
     });
   
     describe('updateRecipe', () => {
-      const recipeId = mockRecipes[0]._id.toString();
+      const recipeId = mockRecipes[0]._id!.toString();
       const validUpdate = { name: 'Updated Recipe Name' };
   
       it('should update a recipe with valid data', async () => {
@@ -207,7 +206,7 @@ describe('RecipeService', () => {
     });
   
     describe('deleteRecipe', () => {
-      const recipeId = mockRecipes[0]._id.toString();
+      const recipeId = mockRecipes[0]._id!.toString();
   
       it('should delete a recipe when it exists', async () => {
         await service.deleteRecipe(recipeId);
@@ -237,47 +236,48 @@ describe('RecipeService', () => {
   
     describe('createManyRecipes', () => {
       const validRecipes = [
-        {
+        createMockRecipe({
           name: 'Recipe 1',
-          ingredients: [{ name: 'Ingredient', quantity: '100', unit: 'g' }],
+          ingredients: [{ id: 1, productName: 'Ingredient', quantity: 100, unit: 'g' }],
           procedure: ['Step 1'],
           prepTime: 10,
           cookTime: 20,
           servings: 4,
           createdBy: new ObjectId(),
-        },
-        {
+        }),
+        createMockRecipe({
           name: 'Recipe 2',
-          ingredients: [{ name: 'Ingredient', quantity: '100', unit: 'g' }],
+          ingredients: [{ id: 2, productName: 'Ingredient', quantity: 100, unit: 'g' }],
           procedure: ['Step 1'],
           prepTime: 10,
           cookTime: 20,
           servings: 4,
           createdBy: new ObjectId(),
-        },
+        }),
       ];
   
       it('should create multiple recipes with valid data', async () => {
-        await service.createManyRecipes(validRecipes);
+        const recipeData = validRecipes.map(({ _id, ...rest }) => rest);
+        await service.createManyRecipes(recipeData);
         
-        expect(repository.createMany).toHaveBeenCalledWith(validRecipes, undefined);
+        expect(repository.createMany).toHaveBeenCalledWith(recipeData, undefined);
       });
   
       it('should throw ValidationError when any recipe is invalid', async () => {
-        const invalidRecipes = [
-          ...validRecipes,
-          {
+        const recipeData = [
+          ...validRecipes.map(({ _id, ...rest }) => rest),
+          createMockRecipe({
             name: '',  // Invalid name
-            ingredients: [{ name: 'Ingredient', quantity: '100', unit: 'g' }],
+            ingredients: [{ id: 3, productName: 'Ingredient', quantity: 100, unit: 'g' }],
             procedure: ['Step 1'],
             prepTime: 10,
             cookTime: 20,
             servings: 4,
             createdBy: new ObjectId(),
-          },
+          }),
         ];
         
-        await expect(service.createManyRecipes(invalidRecipes)).rejects.toThrow(ValidationError);
+        await expect(service.createManyRecipes(recipeData)).rejects.toThrow(ValidationError);
         expect(repository.createMany).not.toHaveBeenCalled();
       });
     });

@@ -1,16 +1,17 @@
 import { NextApiResponse } from "next";
-import { connectToDatabase } from "../../../lib/mongodb";
-import { hash } from "bcryptjs";
 import {
   withApiAuth,
   ExtendedNextApiRequest,
 } from "../../../lib/auth-middleware";
 import { Permission } from "../../../types/Permission";
-import { UserRole } from "../../../types/Roles";
+import { getUserService } from "../../../services/userService";
+import { ValidationError } from "../../../errors/ValidationError";
+import { UserRole } from "@/types/Roles";
 
+/**
+ * Handler for /api/users - Supports GET and POST methods
+ */
 async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
-  const { db } = await connectToDatabase();
-
   switch (req.method) {
     case "GET":
       return withApiAuth(getUsers, Permission.VIEW_USERS)(req, res);
@@ -22,21 +23,55 @@ async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
   }
 }
 
+/**
+ * GET /api/users - Get all users with pagination, sorting, and filtering
+ */
 async function getUsers(req: ExtendedNextApiRequest, res: NextApiResponse) {
-  const { db } = await connectToDatabase();
   try {
-    const users = await db
-      .collection("users")
-      .find({}, { projection: { password: 0 } })
-      .toArray();
-    res.status(200).json(users);
+    const userService = await getUserService();
+    
+    // Parse query parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const sortField = req.query.sortBy as string || "FirstName";
+    const sortOrder = req.query.sortOrder === "asc" ? 1 : -1;
+    
+    // Handle role filtering if provided
+    const filter: Record<string, any> = {};
+    if (req.query.role && Object.values(UserRole).includes(req.query.role as UserRole)) {
+      filter.role = req.query.role;
+    }
+    
+    // Create query options
+    const options = {
+      skip: (page - 1) * limit,
+      limit,
+      sort: { [sortField]: sortOrder } as Record<string, 1 | -1>,
+      filter
+    };
+    
+    const result = await userService.getAllUsers(options);
+    
+    // Transform results to remove passwords
+    const sanitizedResult = {
+      ...result,
+      items: result.items.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      })
+    };
+    
+    res.status(200).json(sanitizedResult);
   } catch (error) {
+    console.error("Failed to fetch users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
   }
 }
 
+/**
+ * POST /api/users - Create a new user
+ */
 async function createUser(req: ExtendedNextApiRequest, res: NextApiResponse) {
-  const { db } = await connectToDatabase();
   try {
     const { email, password, FirstName, LastName, role } = req.body;
     const currentUserRole = req.user?.role;
@@ -49,58 +84,35 @@ async function createUser(req: ExtendedNextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    const userService = await getUserService();
+
     // Check if the current user is allowed to create a user with the given role
-    if (!isAllowedToCreateRole(currentUserRole, role as UserRole)) {
+    if (!userService.isAllowedToCreateRole(currentUserRole, role)) {
       return res.status(403).json({
         error: "You don't have permission to create a user with this role",
       });
     }
 
-    const existingUser = await db.collection("users").findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ error: "User already exists" });
-    }
-
-    const hashedPassword = await hash(password, 12);
-
-    const newUser = {
+    const newUser = await userService.createUser({
       email,
-      password: hashedPassword,
+      password,
       FirstName,
       LastName,
-      role: role as UserRole,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const result = await db.collection("users").insertOne(newUser);
+      role
+    });
 
     res.status(201).json({
       message: "User created successfully",
-      user: { ...newUser, _id: result.insertedId, password: undefined },
+      user: newUser
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to create user" });
-  }
-}
+    console.error("Failed to create user:", error);
 
-function isAllowedToCreateRole(
-  currentRole: UserRole,
-  targetRole: UserRole
-): boolean {
-  switch (currentRole) {
-    case UserRole.ADMIN:
-      return true;
-    case UserRole.CHEF:
-      return (
-        targetRole === UserRole.CHEF ||
-        targetRole === UserRole.MANAGER ||
-        targetRole === UserRole.STAFF
-      );
-    case UserRole.MANAGER:
-      return targetRole === UserRole.MANAGER || targetRole === UserRole.STAFF;
-    default:
-      return false;
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: "Failed to create user" });
+    }
   }
 }
 

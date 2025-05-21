@@ -23,6 +23,13 @@ jest.mock('../../../../lib/mongodb', () => ({
 
 jest.mock('../../../../services/invitationService');
 
+// Mock the email service factory
+jest.mock('../../../../services/email/email-service-factory', () => ({
+    createMailService: jest.fn().mockReturnValue({
+        sendEmail: jest.fn().mockResolvedValue({ success: true, messageId: 'test-id' })
+    })
+}));
+
 describe('/api/invitations/complete', () => {
     beforeEach(() => {
         jest.clearAllMocks();

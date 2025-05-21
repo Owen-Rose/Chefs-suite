@@ -17,6 +17,10 @@ export interface Recipe {
   procedure: string[];
   description?: string;
   foodCost?: number;
+  prepTime?: number; // Adding properties used in tests
+  cookTime?: number;
+  servings?: number;
+  createdBy?: ObjectId;
   archiveId?: ObjectId | null;
   archiveDate?: Date | null;
   importSource?: string;

@@ -1,21 +1,20 @@
 import { NextApiResponse } from "next";
-import { ObjectId } from "mongodb";
-import { connectToDatabase } from "../../../lib/mongodb";
-import {
-  withApiAuth,
-  ExtendedNextApiRequest,
-} from "../../../lib/auth-middleware";
+import { withApiAuth, ExtendedNextApiRequest } from "../../../lib/auth-middleware";
 import { Permission } from "../../../types/Permission";
-import { UserRole } from "../../../types/Roles";
-import { hash } from "bcryptjs";
+import { getUserService } from "../../../services/userService";
+import { ValidationError } from "../../../errors/ValidationError";
+import { NotFoundError } from "../../../errors/NotFoundError";
 
+/**
+ * Handler for /api/users/[id] - Supports GET, PUT, and DELETE methods
+ */
 async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
-
-  if (!ObjectId.isValid(id as string)) {
-    return res.status(400).json({ error: "Invalid user ID" });
+  
+  if (!id || typeof id !== "string") {
+    return res.status(400).json({ error: "User ID is required" });
   }
-
+  
   switch (req.method) {
     case "GET":
       return withApiAuth(getUser, Permission.VIEW_USERS)(req, res);
@@ -29,149 +28,116 @@ async function handler(req: ExtendedNextApiRequest, res: NextApiResponse) {
   }
 }
 
+/**
+ * GET /api/users/[id] - Get a user by ID
+ */
 async function getUser(req: ExtendedNextApiRequest, res: NextApiResponse) {
-  const { db } = await connectToDatabase();
-  const { id } = req.query;
-
+  const { id } = req.query as { id: string };
+  
   try {
-    const user = await db
-      .collection("users")
-      .findOne(
-        { _id: new ObjectId(id as string) },
-        { projection: { password: 0 } }
-      );
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.status(200).json(user);
+    const userService = await getUserService();
+    const user = await userService.getUserById(id);
+    
+    // Remove password from response
+    const { password, ...userWithoutPassword } = user;
+    
+    res.status(200).json(userWithoutPassword);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch user" });
+    console.error("Failed to fetch user:", error);
+    
+    if (error instanceof NotFoundError) {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
   }
 }
 
+/**
+ * PUT /api/users/[id] - Update a user
+ */
 async function updateUser(req: ExtendedNextApiRequest, res: NextApiResponse) {
-  const { db } = await connectToDatabase();
-  const { id } = req.query;
-  const { email, password, FirstName, LastName, role } = req.body;
-  const currentUserRole = req.user?.role;
-
-  if (!currentUserRole) {
-    return res.status(401).json({ error: "User role not found" });
-  }
-
+  const { id } = req.query as { id: string };
+  
   try {
-    const existingUser = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(id as string) });
-
-    if (!existingUser) {
-      return res.status(404).json({ error: "User not found" });
+    const userService = await getUserService();
+    const currentUserRole = req.user?.role;
+    
+    if (!currentUserRole) {
+      return res.status(401).json({ error: "User role not found" });
     }
-
-    // Check if the current user is allowed to edit the user
-    if (!canEditUser(currentUserRole, existingUser.role)) {
+    
+    // Get the user to update - needed to check role permissions
+    const existingUser = await userService.getUserById(id);
+    
+    // Check if the user has permission to edit this user
+    if (!userService.canEditUser(currentUserRole, existingUser.role)) {
       return res.status(403).json({
         error: `You don't have permission to edit ${existingUser.role} users`,
       });
     }
-
-    // Check if the current user is allowed to assign the new role
-    if (!isAllowedToAssignRole(currentUserRole, role as UserRole)) {
-      return res
-        .status(403)
-        .json({ error: "You don't have permission to assign this role" });
+    
+    // Check if the user has permission to change this user's role
+    if (req.body.role && existingUser.role !== req.body.role) {
+      if (!userService.isAllowedToCreateRole(currentUserRole, req.body.role)) {
+        return res.status(403).json({
+          error: "You don't have permission to change this user's role",
+        });
+      }
     }
-
-    const updateData: any = {
-      email,
-      FirstName,
-      LastName,
-      role,
-      updatedAt: new Date(),
-    };
-    if (password) {
-      updateData.password = await hash(password, 12);
-    }
-
-    const result = await db
-      .collection("users")
-      .updateOne({ _id: new ObjectId(id as string) }, { $set: updateData });
-
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.status(200).json({ message: "User updated successfully" });
+    
+    const updatedUser = await userService.updateUser(id, req.body);
+    
+    res.status(200).json(updatedUser);
   } catch (error) {
-    res.status(500).json({ error: "Failed to update user" });
+    console.error("Failed to update user:", error);
+    
+    if (error instanceof NotFoundError) {
+      res.status(404).json({ error: error.message });
+    } else if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: "Failed to update user" });
+    }
   }
 }
 
+/**
+ * DELETE /api/users/[id] - Delete a user
+ */
 async function deleteUser(req: ExtendedNextApiRequest, res: NextApiResponse) {
-  const { db } = await connectToDatabase();
-  const { id } = req.query;
-  const currentUserRole = req.user?.role;
-
-  if (!currentUserRole) {
-    return res.status(401).json({ error: "User role not found" });
-  }
-
+  const { id } = req.query as { id: string };
+  
   try {
-    const userToDelete = await db
-      .collection("users")
-      .findOne({ _id: new ObjectId(id as string) });
-
-    if (!userToDelete) {
-      return res.status(404).json({ error: "User not found" });
+    const userService = await getUserService();
+    const currentUserRole = req.user?.role;
+    
+    if (!currentUserRole) {
+      return res.status(401).json({ error: "User role not found" });
     }
-
-    // Check if the current user is allowed to delete the user
-    if (!canEditUser(currentUserRole, userToDelete.role)) {
+    
+    // Get the user to delete - needed to check role permissions
+    const userToDelete = await userService.getUserById(id);
+    
+    // Check if the user has permission to delete this user
+    if (!userService.canEditUser(currentUserRole, userToDelete.role)) {
       return res.status(403).json({
         error: `You don't have permission to delete ${userToDelete.role} users`,
       });
     }
-
-    const result = await db
-      .collection("users")
-      .deleteOne({ _id: new ObjectId(id as string) });
-
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.status(200).json({ message: "User deleted successfully" });
+    
+    await userService.deleteUser(id);
+    
+    // Return 204 No Content for successful deletion
+    res.status(204).end();
   } catch (error) {
-    res.status(500).json({ error: "Failed to delete user" });
-  }
-}
-
-function canEditUser(currentRole: UserRole, targetRole: UserRole): boolean {
-  if (currentRole === UserRole.ADMIN) return true;
-  if (currentRole === UserRole.CHEF) return targetRole !== UserRole.ADMIN;
-  if (currentRole === UserRole.MANAGER) return targetRole === UserRole.STAFF;
-  return false;
-}
-
-function isAllowedToAssignRole(
-  currentRole: UserRole,
-  targetRole: UserRole
-): boolean {
-  switch (currentRole) {
-    case UserRole.ADMIN:
-      return true;
-    case UserRole.CHEF:
-      return (
-        targetRole === UserRole.CHEF ||
-        targetRole === UserRole.MANAGER ||
-        targetRole === UserRole.STAFF
-      );
-    case UserRole.MANAGER:
-      return targetRole === UserRole.STAFF;
-    default:
-      return false;
+    console.error("Failed to delete user:", error);
+    
+    if (error instanceof NotFoundError) {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: "Failed to delete user" });
+    }
   }
 }
 

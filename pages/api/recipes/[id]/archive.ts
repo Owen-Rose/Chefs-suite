@@ -1,66 +1,72 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { ObjectId } from "mongodb";
-import { connectToDatabase } from "../../../../lib/mongodb";
+import corsMiddleware, { runMiddleware } from "../../../../lib/cors-middleware";
 import { withApiAuth } from "../../../../lib/auth-middleware";
 import { Permission } from "../../../../types/Permission";
+import { getRecipeService } from "../../../../services/recipeService";
+import { getArchiveRepository } from "../../../../repositories/archiveRepository";
+import { NotFoundError } from "../../../../errors/NotFoundError";
+import { ObjectId } from "mongodb";
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
+  await runMiddleware(req, res, corsMiddleware);
+  
   if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method Not Allowed" });
+    res.setHeader("Allow", ["POST"]);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
-
+  
   const { id } = req.query;
   const { archiveId } = req.body;
-
-  if (!id || !archiveId) {
-    return res.status(400).json({ message: "Missing required parameters" });
+  
+  if (!id || typeof id !== "string") {
+    return res.status(400).json({ error: "Recipe ID is required" });
   }
-
+  
+  if (!archiveId) {
+    return res.status(400).json({ error: "Archive ID is required" });
+  }
+  
+  if (!ObjectId.isValid(archiveId)) {
+    return res.status(400).json({ error: "Invalid archive ID" });
+  }
+  
   try {
-    const { db, client } = await connectToDatabase();
-
-    const session = client.startSession();
-
-    try {
-      await session.withTransaction(async () => {
-        const recipe = await db
-          .collection("recipes")
-          .findOne({ _id: new ObjectId(id as string) });
-
-        if (!recipe) {
-          throw new Error("Recipe not found");
-        }
-
-        const { _id, ...recipeWithoutId } = recipe;
-        const archivedRecipe = {
-          ...recipeWithoutId,
-          archivedDate: new Date(),
-          originalId: _id,
-        };
-
-        await db
-          .collection("archives")
-          .updateOne(
-            { _id: new ObjectId(archiveId) },
-            { $push: { recipes: archivedRecipe } as any },
-            { session }
-          );
-
-        await db
-          .collection("recipes")
-          .deleteOne({ _id: new ObjectId(id as string) }, { session });
-      });
-
-      res.status(200).json({ message: "Recipe archived successfully" });
-    } finally {
-      await session.endSession();
+    const recipeService = await getRecipeService();
+    const archiveRepository = await getArchiveRepository();
+    
+    // Check if recipe exists
+    const recipe = await recipeService.getRecipeById(id);
+    
+    // Check if archive exists
+    const archiveExists = await archiveRepository.exists(archiveId);
+    if (!archiveExists) {
+      return res.status(404).json({ error: "Archive not found" });
     }
-  } catch (error) {
-    console.error("Error archiving recipe:", error);
-    res.status(500).json({
-      message: "Internal Server Error",
-      error: (error as Error).message,
+    
+    const now = new Date();
+    
+    // Add recipe to archive
+    await archiveRepository.addRecipe(archiveId, {
+      ...recipe,
+      originalId: id,
+      archivedDate: now
     });
+    
+    // Update the recipe with archive information
+    const updatedRecipe = await recipeService.updateRecipe(id, {
+      archiveId: new ObjectId(archiveId),
+      archiveDate: now
+    });
+    
+    res.status(200).json(updatedRecipe);
+  } catch (error) {
+    console.error("Failed to archive recipe:", error);
+    
+    if (error instanceof NotFoundError) {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: "Failed to archive recipe" });
+    }
   }
 }
 

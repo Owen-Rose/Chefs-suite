@@ -1,8 +1,8 @@
 import NextAuth, { NextAuthOptions, DefaultSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { connectToDatabase } from "../../../lib/mongodb";
 import { compare } from "bcryptjs";
 import { UserRole } from "../../../types/Roles";
+import { getMongoUserRepository } from "../../../repositories/userRepository";
 
 // Extend the built-in session types
 declare module "next-auth" {
@@ -38,30 +38,33 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const { db } = await connectToDatabase();
-        const user = await db
-          .collection("users")
-          .findOne({ email: credentials.email });
+        try {
+          const userRepository = await getMongoUserRepository();
+          const user = await userRepository.findByEmail(credentials.email);
 
-        if (!user) {
+          if (!user) {
+            return null;
+          }
+
+          const isPasswordValid = await compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            return null;
+          }
+
+          return {
+            id: user._id ? user._id.toString() : "",
+            email: user.email,
+            name: `${user.FirstName} ${user.LastName}`,
+            role: user.role as UserRole,
+          };
+        } catch (error) {
+          console.error("Authentication error:", error);
           return null;
         }
-
-        const isPasswordValid = await compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          name: `${user.FirstName} ${user.LastName}`,
-          role: user.role as UserRole,
-        };
       },
     }),
   ],

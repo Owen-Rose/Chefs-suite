@@ -12,7 +12,8 @@ export enum Permission {
   EDIT_USERS = "EDIT_USERS",
   DELETE_USERS = "DELETE_USERS",
   MANAGE_ROLES = "MANAGE_ROLES",
-  IMPORT_RECIPES = 'import_recipes',
+  IMPORT_RECIPES = "IMPORT_RECIPES",
+  MANAGE_RECIPES = "MANAGE_RECIPES"
 }
 
 export const RolePermissions: Record<UserRole, Permission[]> = {
@@ -29,6 +30,8 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.EDIT_USERS,
     Permission.DELETE_USERS,
     Permission.MANAGE_ROLES,
+    Permission.MANAGE_RECIPES,
+    Permission.IMPORT_RECIPES,
   ],
   [UserRole.PASTRY_CHEF]: [
     Permission.ACCESS_APP,
@@ -42,6 +45,8 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.EDIT_USERS,
     Permission.DELETE_USERS,
     Permission.MANAGE_ROLES,
+    Permission.MANAGE_RECIPES,
+    Permission.IMPORT_RECIPES,
   ],
   [UserRole.MANAGER]: [
     Permission.ACCESS_APP,
@@ -52,6 +57,8 @@ export const RolePermissions: Record<UserRole, Permission[]> = {
     Permission.PRINT_RECIPES,
     Permission.CREATE_USERS,
     Permission.EDIT_USERS,
+    Permission.MANAGE_RECIPES,
+    Permission.IMPORT_RECIPES,
   ],
   [UserRole.STAFF]: [Permission.ACCESS_APP, Permission.VIEW_RECIPES],
 };

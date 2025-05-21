@@ -17,8 +17,27 @@ jest.mock('../../../../lib/mongodb', () => ({
 
 jest.mock('../../../../services/invitationService');
 
+// Mock the email service factory
+jest.mock('../../../../services/email/email-service-factory', () => ({
+    createMailService: jest.fn().mockReturnValue({
+        sendEmail: jest.fn().mockResolvedValue({ success: true, messageId: 'test-id' })
+    })
+}));
+
 jest.mock('../../../../lib/auth-middleware', () => ({
-    withApiAuth: (handler: NextApiHandler) => handler,
+    withApiAuth: (handler: NextApiHandler, requiredPermission: any) => {
+        return async (req: any, res: any) => {
+            // For invitation tests, we need to check permission properly
+            if (req.user && req.user.hasPermission && requiredPermission) {
+                if (!req.user.hasPermission(requiredPermission)) {
+                    return res.status(403).json({ error: "Not authorized" });
+                }
+            } else if (requiredPermission && (!req.user || !req.user.hasPermission)) {
+                return res.status(403).json({ error: "Not authorized" });
+            }
+            return handler(req, res);
+        };
+    },
     ExtendedNextApiRequest: {}
 }));
 
@@ -62,8 +81,8 @@ describe('/api/invitations', () => {
                 id: mockUserId.toString(), // Use the valid ObjectId string
                 role: UserRole.ADMIN,
                 hasPermission: jest.fn().mockImplementation((permission: Permission) => {
-                    console.log(`Permission check: ${permission}, result: ${permission === Permission.CREATE_USERS}`);
-                    return permission === Permission.CREATE_USERS;
+                    console.log(`Permission check: ${permission}, result: ${permission === Permission.CREATE_USERS || permission === Permission.VIEW_USERS}`);
+                    return permission === Permission.CREATE_USERS || permission === Permission.VIEW_USERS;
                 })
             };
 

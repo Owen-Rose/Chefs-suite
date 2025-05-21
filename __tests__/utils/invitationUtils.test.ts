@@ -6,9 +6,9 @@ import { ObjectId } from "mongodb";
 
 describe("InvitationUtils", () => {
     describe("generateToken", () => {
-        test("should generate a 64-character hex string", () => {
+        test("should generate a 96-character hex string", () => {
             const token = InvitationUtils.generateToken();
-            expect(token).toMatch(/^[0-9a-f]{64}$/);
+            expect(token).toMatch(/^[0-9a-f]{96}$/);
         });
 
         test("should generate unique tokens on multiple calls", () => {
@@ -31,7 +31,7 @@ describe("InvitationUtils", () => {
             expect(invitation.invitedBy).toBe(invitedBy);
             expect(invitation.status).toBe(InvitationStatus.PENDING);
             expect(invitation.token).toBeDefined();
-            expect(invitation.token.length).toBe(64);
+            expect(invitation.token.length).toBe(96);
             expect(invitation.expiresAt).toBeInstanceOf(Date);
             expect(invitation.createdAt).toBeInstanceOf(Date);
 

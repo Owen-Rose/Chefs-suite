@@ -5,6 +5,7 @@
 import { Container, ServiceLifetime, ServiceToken } from '@/lib/container';
 import { RepositoryTokens, ServiceTokens } from '@/lib/services';
 import { mockRecipeRepository, mockUserRepository } from './mockFactory';
+import { mock } from 'jest-mock-extended';
 import { BaseRepository } from '@/repositories/base/BaseRepository';
 import { Recipe } from '@/types/Recipe';
 import { User } from '@/types/User';
@@ -25,39 +26,35 @@ export function createTestContainer(mockData: {
   const container = new Container();
   
   // Register mock repositories
-  container.register<BaseRepository<Recipe>>(
+  container.registerInstance<BaseRepository<Recipe>>(
     RepositoryTokens.RecipeRepository,
-    () => mockRecipeRepository(mockData.recipes || []),
-    { lifetime: ServiceLifetime.SINGLETON }
+    mockRecipeRepository(mockData.recipes || [])
   );
   
-  container.register<any>(
+  container.registerInstance<any>(
     RepositoryTokens.UserRepository,
-    () => mockUserRepository(mockData.users || []),
-    { lifetime: ServiceLifetime.SINGLETON }
+    mockUserRepository(mockData.users || [])
   );
   
   // Register mock archive repository with minimal implementation
-  container.register<BaseRepository<Archive>>(
+  container.registerInstance<BaseRepository<Archive>>(
     RepositoryTokens.ArchiveRepository,
-    () => mockRecipeRepository(mockData.archives || []) as unknown as BaseRepository<Archive>,
-    { lifetime: ServiceLifetime.SINGLETON }
+    // Create a custom mock for archives instead of reusing recipe repository
+    mock<BaseRepository<Archive>>()
   );
   
-  // Register services with mock repositories using dynamic imports to avoid circular dependencies
+  // Register services with mock repositories using dynamic imports
   import('@/services/recipeService').then(({ RecipeService }) => {
-    container.register<any>(
+    container.register(
       ServiceTokens.RecipeService,
-      (c) => new RecipeService(c.resolve(RepositoryTokens.RecipeRepository)),
-      { lifetime: ServiceLifetime.SINGLETON }
+      () => new RecipeService(container.resolve(RepositoryTokens.RecipeRepository))
     );
   }).catch(err => console.error('Error loading RecipeService:', err));
   
   import('@/services/userService').then(({ UserService }) => {
-    container.register<any>(
+    container.register(
       ServiceTokens.UserService,
-      (c) => new UserService(c.resolve(RepositoryTokens.UserRepository)),
-      { lifetime: ServiceLifetime.SINGLETON }
+      () => new UserService(container.resolve(RepositoryTokens.UserRepository))
     );
   }).catch(err => console.error('Error loading UserService:', err));
   
