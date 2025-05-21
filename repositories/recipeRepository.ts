@@ -1,51 +1,34 @@
-// import { Recipe } from "@/types/Recipe";
-// import { Collection, Db, ObjectId } from "mongodb";
+import { connectToDatabase } from "@/lib/mongodb";
+import { BaseRepository } from "./base/BaseRepository";
+import { Recipe } from "@/types/Recipe";
+import { MongoRecipeRepository } from "./implementations/MongoRecipeRepository";
 
-// export class RecipeRepository {
-//     private collection: Collection<Recipe>;
+/**
+ * Singleton instance of the recipe repository
+ */
+let recipeRepository: BaseRepository<Recipe> | null = null;
 
-//     constructor(db: Db) {
-//         this.collection = db.collection<Recipe>("recipes");
-//     }
+/**
+ * Factory function to get or create the recipe repository instance
+ * Uses a singleton pattern to avoid creating multiple connections
+ * 
+ * @returns A promise resolving to the recipe repository instance
+ */
+export async function getRecipeRepository(): Promise<BaseRepository<Recipe>> {
+  if (!recipeRepository) {
+    const { recipes } = await connectToDatabase();
+    recipeRepository = new MongoRecipeRepository(recipes);
+  }
+  return recipeRepository;
+}
 
-//     async findAll(): Promise<Recipe[]> {
-//         return await this.collection.find({}).toArray();
-//     }
-
-//     async findById(id: string): Promise<Recipe | null> {
-//         return await this.collection.findOne({ _id: new ObjectId(id) });
-//     }
-
-//     async create(recipe: Omit<Recipe, "_id">): Promise<Recipe> {
-//         const result = await this.collection.insertOne({
-//             ...recipe,
-//             _id: new ObjectId()
-//         } as Recipe);
-
-//         const created = await this.findById(result.insertedId.toString());
-//         if (!created) {
-//             throw new Error("Failed to create recipe");
-//         }
-//         return created;
-//     }
-
-//     async update(id: string, recipe: Partial<Recipe>): Promise<Recipe> {
-//         const result = await this.collection.findOneAndUpdate(
-//             { _id: new ObjectId(id) },
-//             { $set: recipe },
-//             { returnDocument: 'after' }
-//         );
-
-//         if (!result) {
-//             throw new Error("Recipe not found");
-//         }
-//         return result;
-//     }
-
-//     async delete(id: string): Promise<void> {
-//         const result = await this.collection.deleteOne({ _id: new ObjectId(id) });
-//         if (result.deletedCount === 0) {
-//             throw new Error("Recipe not found");
-//         }
-//     }
-// }
+/**
+ * Get the MongoDB implementation of the recipe repository
+ * This is useful when you need access to recipe-specific methods not in the base interface
+ * 
+ * @returns A promise resolving to the MongoDB recipe repository instance
+ */
+export async function getMongoRecipeRepository(): Promise<MongoRecipeRepository> {
+  const repo = await getRecipeRepository();
+  return repo as MongoRecipeRepository;
+}
