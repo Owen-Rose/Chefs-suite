@@ -5,6 +5,8 @@ import { authOptions } from "../pages/api/auth/[...nextauth]";
 import { Permission, hasPermission } from "../types/Permission";
 import { UserRole } from "../types/Roles";
 import { RequestWithServices, withServices } from "./withServices";
+import { UnauthorizedError, ForbiddenError } from "../errors";
+import { ApiHandler, withErrorHandler } from "./error-middleware";
 
 /**
  * Request interface for authenticated requests
@@ -72,6 +74,49 @@ export function withApiAuth(
       return res.status(500).json({ error: "Authentication error", details: error instanceof Error ? error.message : "Unknown error" });
     }
   };
+}
+
+/**
+ * Enhanced middleware with error handling integration
+ * 
+ * @param handler - The API route handler function
+ * @param requiredPermission - The permission required to access this endpoint
+ * @returns A new handler with authentication and error handling
+ */
+export function withApiAuthAndErrorHandler(
+  handler: ApiHandler,
+  requiredPermission?: Permission
+): ApiHandler {
+  return withErrorHandler(async (req: NextApiRequest, res: NextApiResponse) => {
+    const session = await getServerSession(req, res, authOptions);
+
+    if (!session || !session.user) {
+      throw new UnauthorizedError("Authentication required to access this resource");
+    }
+
+    const userRole = session.user.role as UserRole;
+    const userId = session.user.id as string;
+    const userEmail = session.user.email as string;
+
+    if (!userRole || !userId || !userEmail) {
+      throw new UnauthorizedError("Invalid session - missing user information");
+    }
+
+    // Check if the user has the required permission
+    if (requiredPermission && !hasPermission(userRole, requiredPermission)) {
+      throw ForbiddenError.missingPermission(requiredPermission, userRole);
+    }
+
+    // Extend the request with user info
+    const extendedReq = req as AuthenticatedRequest;
+    extendedReq.user = {
+      role: userRole,
+      id: userId,
+      hasPermission: (permission: Permission) => hasPermission(userRole, permission)
+    };
+
+    return await handler(extendedReq, res);
+  });
 }
 
 /**

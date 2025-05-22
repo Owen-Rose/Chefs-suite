@@ -3,7 +3,7 @@
 ## Overall Progress
 
 - Phase 1: Foundational Improvements (7/18 tasks complete)
-- Phase 2: Architecture Enhancement (0/16 tasks complete)
+- Phase 2: Architecture Enhancement (2/17 tasks complete)
 - Phase 3: App Router Migration (0/4 tasks complete)
 
 ## Current Phase Focus
@@ -23,11 +23,12 @@
 | 1.5 | Update Recipe API Endpoints | ✅ Completed | Claude | | 2025-05-21 |
 | 1.6 | Update User API Endpoints | ✅ Completed  | Claude | | 2025-05-21 |
 | 1.7 | Implement Dependency Injection Pattern | ✅ Completed | Claude | | 2025-05-21 |
-| 2.1 | Create Custom Error Classes | 🔄 Not Started | | | |
-| 2.2 | Implement Error Handling Middleware | 🔄 Not Started | | | |
+| 2.1 | Create Custom Error Classes | ✅ Completed | Claude | | 2025-05-22 |
+| 2.2 | Implement Error Handling Middleware | ✅ Completed | Claude | | 2025-05-22 |
 | 2.3 | Integrate Structured Logging | 🔄 Not Started | | | |
 | 2.4 | Update Recipe Service with Error Handling | 🔄 Not Started | | | |
 | 2.5 | Update Invitation Service with Error Handling | 🔄 Not Started | | | |
+| 2.6 | Refactor All API Endpoints to Use New Error Handling Middleware | 🔄 Not Started | | | |
 | 3.1 | Create Component Migration Inventory | 🔄 Not Started | | | |
 | 3.2 | Migrate Basic UI Components | 🔄 Not Started | | | |
 | 3.3 | Migrate Layout Components | 🔄 Not Started | | | |
